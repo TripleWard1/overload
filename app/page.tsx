@@ -903,13 +903,19 @@ export default function GymApp() {
   };
 
   /* -------------------- SHARED UI -------------------- */
-  const BrandMark = ({
-    widthPx = 64,
-    heightPx = 120,
-  }: {
-    widthPx?: number;
-    heightPx?: number;
-  }) => (
+const BrandMark = ({
+  sizePx,
+  widthPx,
+  heightPx,
+}: {
+  sizePx?: number;     // ✅ para <BrandMark sizePx={...} />
+  widthPx?: number;    // ✅ para <BrandMark widthPx={...} />
+  heightPx?: number;   // ✅ para <BrandMark heightPx={...} />
+}) => {
+  const w = typeof widthPx === 'number' ? widthPx : typeof sizePx === 'number' ? sizePx : 64;
+  const h = typeof heightPx === 'number' ? heightPx : typeof sizePx === 'number' ? sizePx : 64;
+
+  return (
     <img
       src={BRAND_LOGO_URL}
       alt={BRAND_NAME}
@@ -917,9 +923,11 @@ export default function GymApp() {
       crossOrigin="anonymous"
       draggable={false}
       className="object-contain drop-shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
-      style={{ width: widthPx, height: heightPx }}
+      style={{ width: w, height: h }}
     />
   );
+};
+
 
   /* -------------------- RENDER -------------------- */
   return (
