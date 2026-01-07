@@ -276,6 +276,11 @@ export default function GymApp() {
   const [templatesExpanded, setTemplatesExpanded] = useState(false);
   // --- ADICIONA ISTO JUNTO AOS OUTROS USESTATES ---
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+
+// ✅ Toast específico para Templates (novo/atualizado)
+const [showTemplateToast, setShowTemplateToast] = useState(false);
+const [templateToastText, setTemplateToastText] = useState('Treino gravado!');
+  
   // COLAR ISTO LOGO ABAIXO DOS TEUS USESTATES
   const startWorkoutFromTemplate = (template: WorkoutTemplate) => {
     startFromTemplate(template);
@@ -669,7 +674,7 @@ export default function GymApp() {
       }
     );
 
-    setTemplates((prev) => {
+       setTemplates((prev) => {
       const existingIdx = prev.findIndex(
         (t) => t.normalizedName === tplNormalized
       );
@@ -840,10 +845,10 @@ export default function GymApp() {
   const saveTemplate = () => {
     const name = templateNameInput.trim().replace(/\s+/g, ' ');
     if (!name) return;
-
+  
     const normalizedName = normalizeName(name);
     const updatedAt = new Date().toISOString();
-
+  
     const cleanedExercises = templateDraftExercises
       .map((e) => ({
         ...e,
@@ -860,13 +865,20 @@ export default function GymApp() {
             : e.restSeconds,
       }))
       .filter((e) => e.normalizedName);
-
+  
+    // ✅ deteta se vai ser update (por id OU por nome)
+    const isUpdate =
+      (selectedTemplateId &&
+        selectedTemplateId !== 'NEW' &&
+        templates.some((t) => t.id === selectedTemplateId)) ||
+      templates.some((t) => t.normalizedName === normalizedName);
+  
     setTemplates((prev) => {
       const isNew = selectedTemplateId === 'NEW' || !selectedTemplateId;
       const existingIdx = !isNew
         ? prev.findIndex((t) => t.id === selectedTemplateId)
         : -1;
-
+  
       const tpl: WorkoutTemplate = {
         id: isNew
           ? crypto.randomUUID()
@@ -876,7 +888,7 @@ export default function GymApp() {
         updatedAt,
         exercises: cleanedExercises,
       };
-
+  
       if (existingIdx >= 0) {
         const copy = [...prev];
         copy[existingIdx] = tpl;
@@ -885,7 +897,7 @@ export default function GymApp() {
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         );
       }
-
+  
       const sameNameIdx = prev.findIndex(
         (t) => t.normalizedName === normalizedName
       );
@@ -897,9 +909,20 @@ export default function GymApp() {
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         );
       }
-
+  
       return [tpl, ...prev];
     });
+  
+    // ✅ toast correto
+    setTemplateToastText(isUpdate ? 'Treino atualizado!' : 'Treino gravado!');
+    setShowTemplateToast(true);
+    setTimeout(() => setShowTemplateToast(false), 1600);
+  
+    // ✅ voltar à lista de treinos
+    setSelectedTemplateId(null);
+    setTemplateNameInput('');
+    setTemplateDraftExercises([]);
+    setExerciseInput('');
   };
 
   /* -------------------- SHARED UI -------------------- */
@@ -1225,6 +1248,30 @@ export default function GymApp() {
       {/* TEMPLATES */}
       {activeTab === 'templates' && (
         <div className="animate-in">
+          {showTemplateToast && (
+      <div className="fixed top-12 left-0 right-0 z-[320] flex justify-center px-6 animate-in">
+        <div className="bg-white/10 border border-white/14 backdrop-blur-2xl text-white px-6 py-4 rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.45)] flex items-center gap-3">
+          <div className="bg-emerald-400 text-[#071018] rounded-full p-1.5 shadow">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="3"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+          <span className="font-black uppercase italic tracking-tighter text-sm">
+            {templateToastText}
+          </span>
+        </div>
+      </div>
+    )}
           <header className="sticky top-0 z-50 px-6 py-4 bg-[#070B14]/70 backdrop-blur-2xl border-b border-white/10 shadow-[0_16px_60px_rgba(0,0,0,0.40)]">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-3 min-w-0">
