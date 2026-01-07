@@ -64,10 +64,10 @@ const STORAGE_KEY_TEMPLATES = 'gym_templates_v1';
 
 /* -------------------- BRAND -------------------- */
 const BRAND_NAME = 'Overload';
-const BRAND_FAVICON_URL = 'https://i.imgur.com/mR0XFUM.png';
+const BRAND_FAVICON_URL = 'https://i.imgur.com/jROIhp2.png';
 
 // ✅ logo transparente (o que pediste)
-const BRAND_LOGO_URL = 'https://i.imgur.com/LnDXPPV.png';
+const BRAND_LOGO_URL = 'https://i.imgur.com/jROIhp2.png';
 
 // ✅ capa do hero (imagem de fundo do header)
 const BRAND_HERO_COVER_URL =
@@ -428,39 +428,94 @@ useEffect(() => {
     return list[0];
   }, [exerciseStats]);
 
-  const homeRecap = useMemo(() => {
+  const weekRecap = useMemo(() => {
     const now = new Date();
-    const keyThisMonth = `${now.getFullYear()}-${String(
-      now.getMonth() + 1
-    ).padStart(2, '0')}`;
-    const thisMonth = sessions.filter((s) => {
-      const d = new Date(s.startedAt);
-      const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-        2,
-        '0'
-      )}`;
-      return k === keyThisMonth;
-    });
+    const day = (now.getDay() + 6) % 7; // Monday=0
+    const startOfWeek = new Date(now);
+    startOfWeek.setHours(0, 0, 0, 0);
+    startOfWeek.setDate(now.getDate() - day);
 
-    const totalSets = thisMonth.reduce(
-      (acc, s) => acc + s.exercises.reduce((a, ex) => a + ex.sets.length, 0),
-      0
+    const weekSessions = sessions.filter(
+      (s) => new Date(s.startedAt).getTime() >= startOfWeek.getTime()
     );
-    const totalMin = thisMonth.reduce(
-      (acc, s) => acc + Math.round((s.durationSeconds ?? 0) / 60),
-      0
-    );
-    const absCount = thisMonth.filter((s) => s.addons?.abs).length;
-    const cardioCount = thisMonth.filter((s) => s.addons?.cardio).length;
+
+    const lastSession = sessions[0]; // newest-first
+
+    const deltaDays = lastSession
+      ? Math.floor(
+          (Date.now() - new Date(lastSession.startedAt).getTime()) /
+            (1000 * 60 * 60 * 24)
+        )
+      : null;
 
     return {
-      thisMonthSessions: thisMonth.length,
-      totalSets,
-      totalMin,
-      absCount,
-      cardioCount,
+      weekCount: weekSessions.length,
+      lastSessionName: lastSession?.name,
+      lastSessionDate: lastSession?.startedAt,
+      lastSessionDaysAgo: deltaDays,
     };
   }, [sessions]);
+
+      const bestLift = useMemo(() => {
+      const all = Object.values(exerciseStats);
+      if (!all.length) return null;
+  
+      // “PR” simples: maior bestWeight; desempata por bestReps
+      const best = all.reduce((acc, s) => {
+        const w = s.bestWeight ?? -1;
+        const r = s.bestReps ?? -1;
+  
+        if (!acc) return s;
+        const aw = acc.bestWeight ?? -1;
+        const ar = acc.bestReps ?? -1;
+  
+        if (w > aw) return s;
+        if (w === aw && r > ar) return s;
+        return acc;
+      }, null as ExerciseStats | null);
+  
+      if (!best || typeof best.bestWeight !== 'number') return null;
+  
+      return {
+        name: best.displayName,
+        weight: best.bestWeight ?? undefined,
+        reps: best.bestReps ?? undefined,
+      };
+    }, [exerciseStats]);
+  
+
+    const homeRecap = useMemo(() => {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth();
+  
+      const thisMonth = sessions.filter((s) => {
+        const d = new Date(s.startedAt);
+        return d.getFullYear() === y && d.getMonth() === m;
+      });
+  
+      const totalSets = thisMonth.reduce(
+        (acc, s) => acc + s.exercises.reduce((a, ex) => a + ex.sets.length, 0),
+        0
+      );
+  
+      const totalMin = thisMonth.reduce(
+        (acc, s) => acc + Math.round((s.durationSeconds ?? 0) / 60),
+        0
+      );
+  
+      const absCount = thisMonth.filter((s) => s.addons?.abs).length;
+      const cardioCount = thisMonth.filter((s) => s.addons?.cardio).length;
+  
+      return {
+        thisMonthSessions: thisMonth.length,
+        totalSets,
+        totalMin,
+        absCount,
+        cardioCount,
+      };
+    }, [sessions]);
+  
 
   const monthLabel = useMemo(() => {
     const d = new Date(calYear, calMonth, 1);
@@ -988,7 +1043,7 @@ const BrandMark = ({
       referrerPolicy="no-referrer"
       crossOrigin="anonymous"
       draggable={false}
-      className="object-contain drop-shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+      className="object-contain drop-shadow-[0_10px_24px_rgba(0,0,0,0.55)]"
       style={{ width: w, height: h }}
     />
   );
@@ -1095,28 +1150,21 @@ const BrandMark = ({
               <div className="relative p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                  <div className="flex items-center">
-                  <div className="relative inline-flex overflow-hidden">
-    {/* glow claro atrás */}
-    <div className="absolute -inset-3 rounded-[2.25rem] bg-white/25 blur-[12px]" />
+                  <div className="flex items-center gap-4">
+  <div className="shrink-0">
+    <BrandMark sizePx={56} />
+  </div>
 
-    {/* vidro claro */}
-    <div className="absolute -inset-2 rounded-[2rem] bg-white/10 border border-white/10 backdrop-blur-xl" />
-
-    {/* faixa clara no centro (ajuda letras pretas) */}
-    <div className="absolute -inset-2 rounded-[2rem] bg-[radial-gradient(85%_70%_at_45%_45%,rgba(255,255,255,0.35),transparent_72%)]" />
-
-    {/* conteúdo */}
-    <div className="relative px-2 py-2 drop-shadow-[0_10px_22px_rgba(0,0,0,0.55)]">
-      <BrandMark widthPx={320} heightPx={96} />
+  <div className="min-w-0">
+    <div className="brand-wordmark" aria-label="Overload">
+      <span className="brand-wordmark-over">Over</span>
+      <span className="brand-wordmark-load">Load</span>
+    </div>
+    <div className="brand-wordmark-sub">
+      Treino. Performance. Progressão.
     </div>
   </div>
 </div>
-
-
-                    <p className="mt-4 text-[11px] font-black uppercase tracking-[0.28em] text-slate-300">
-                      Treino. Performance. Progressão.
-                    </p>
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       <span className="chip">
@@ -1150,42 +1198,78 @@ const BrandMark = ({
                   </div>
                 </div>
 
-                <div className="mt-5 card-soft rounded-[1.9rem] p-4 flex items-center gap-4 overflow-hidden relative">
-                  <div className="absolute inset-0 opacity-[0.08] app-noise" />
-                  <div className="relative h-14 w-14 rounded-2xl overflow-hidden border border-white/10">
-                  <img
-  src={pickImageFor(topExercise?.displayName || 'gym')}
-  alt="Sugestão"
-  className="h-full w-full object-cover"
-  onError={imgFallback}
-  draggable={false}
-/>
+                <div className="mt-5 grid grid-cols-2 gap-3">
+  {/* CONSISTÊNCIA (A) */}
+  <div className="card-soft rounded-[1.9rem] p-4 relative overflow-hidden">
+    <div className="absolute inset-0 opacity-[0.08] app-noise" />
+    <div className="relative">
+      <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
+        Consistência
+      </div>
 
-                    <div className="absolute inset-0 bg-black/25" />
-                  </div>
-                  <div className="relative min-w-0 flex-1">
-                    <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
-                      Sugestão rápida
-                    </div>
-                    <div className="text-sm font-black text-white truncate mt-1">
-                      {topExercise?.displayName
-                        ? `Foca em ${topExercise.displayName}`
-                        : 'Cria o teu primeiro treino'}
-                    </div>
-                    <div className="text-[10px] text-slate-300 font-mono uppercase mt-1">
-                      {topExercise?.lastDate
-                        ? `Última vez: ${formatDatePT(topExercise.lastDate)}`
-                        : 'Sem histórico ainda'}
-                    </div>
-                  </div>
+      <div className="mt-2 text-white font-black italic text-[18px] leading-none">
+        {weekRecap.weekCount} treinos
+      </div>
 
-                  <button
-                    onClick={startNewWorkout}
-                    className="relative btn-primary px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95"
-                  >
-                    Começar
-                  </button>
-                </div>
+      <div className="mt-2 text-[10px] text-slate-300 font-mono uppercase leading-relaxed">
+        {weekRecap.lastSessionDate ? (
+          <>
+            Último: {weekRecap.lastSessionName ? `${weekRecap.lastSessionName} • ` : ''}
+            {formatDatePT(weekRecap.lastSessionDate)}
+            {typeof weekRecap.lastSessionDaysAgo === 'number' ? (
+              <span className="ml-2 text-slate-300">
+                • há {weekRecap.lastSessionDaysAgo}d
+              </span>
+            ) : null}
+          </>
+        ) : (
+          <>Sem sessões ainda</>
+        )}
+      </div>
+    </div>
+  </div>
+
+  {/* PERFORMANCE (B) */}
+  <div className="card-soft rounded-[1.9rem] p-4 relative overflow-hidden">
+    <div className="absolute inset-0 opacity-[0.08] app-noise" />
+    <div className="relative">
+      <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
+        Performance
+      </div>
+
+      <div className="mt-2 text-white font-black italic text-[18px] leading-none">
+        {bestLift?.weight ? `${bestLift.weight}kg` : '--'}
+        {typeof bestLift?.reps === 'number' && bestLift.reps > 0 ? (
+          <span className="ml-2 text-slate-ch text-slate-300 font-black not-italic text-[12px]">
+            × {bestLift.reps}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="mt-2 text-[10px] text-slate-300 font-mono uppercase leading-relaxed">
+        {bestLift?.name ? `PR: ${bestLift.name}` : 'Sem PR registado'}
+      </div>
+    </div>
+  </div>
+</div>
+
+{/* CTA (não assume treino) */}
+<div className="mt-3 flex gap-2">
+  <button
+    onClick={startNewWorkout}
+    className="flex-1 relative btn-primary px-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95"
+  >
+    Começar treino
+  </button>
+
+  <button
+    onClick={() => setActiveTab('templates')}
+    className="btn-soft px-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95"
+  >
+    Escolher template
+  </button>
+</div>
+
               </div>
             </div>
 
@@ -2615,6 +2699,82 @@ const BrandMark = ({
 
         .app-shell ::selection {
           background: rgba(34, 197, 94, 0.22);
+        }
+        
+        /* Wordmark */
+        .brand-wordmark {
+          font-family: var(--font-grotesk), var(--font-inter), system-ui;
+          font-weight: 900;
+          font-size: 34px;
+          line-height: 1;
+          letter-spacing: -0.04em;
+          color: rgba(255, 255, 255, 0.98);
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55), 0 10px 28px rgba(0, 0, 0, 0.35);
+          -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.25);
+        }
+        
+        .brand-wordmark-over {
+          color: rgba(255, 255, 255, 0.98);
+        }
+        
+        .brand-wordmark-load {
+          background: linear-gradient(135deg, rgba(34,197,94,0.95), rgba(163,230,53,0.95));
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          filter: drop-shadow(0 2px 10px rgba(0,0,0,0.45));
+        }
+        
+        .brand-wordmark-sub {
+          margin-top: 10px;
+          font-size: 11px;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: 0.28em;
+          color: rgba(203, 213, 225, 0.92);
+          text-shadow: 0 2px 10px rgba(0,0,0,0.45));
+        }
+        
+            font-family: var(--font-grotesk), var(--font-inter), system-ui;
+            font-weight: 900;
+            font-size: 34px;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            color: rgba(255, 255, 255, 0.98);
+          
+            /* legibilidade em cima de foto, sem fundo */
+            text-shadow:
+              0 2px 10px rgba(0, 0, 0, 0.55),
+              0 10px 28px rgba(0, 0, 0, 0.35);
+            -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.25);
+          }
+          
+          .brand-wordmark-over {
+            color: rgba(255, 255, 255, 0.98);
+          }
+          
+          .brand-wordmark-load {
+            /* toque premium mas sem “painel” atrás */
+            background: linear-gradient(135deg, rgba(34,197,94,0.95), rgba(163,230,53,0.95));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+          
+            /* mantém legível mesmo com gradient text */
+            filter: drop-shadow(0 2px 10px rgba(0,0,0,0.45));
+          }
+          
+          .brand-wordmark-sub {
+            margin-top: 10px;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.28em;
+            color: rgba(203, 213, 225, 0.92);
+            text-shadow: 0 2px 10px rgba(0,0,0,0.45);
+          }
+          
+
         }
       `}</style>
       {/* --- COLA ISTO ANTES DO </main> --- */}
