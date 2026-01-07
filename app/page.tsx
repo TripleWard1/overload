@@ -2421,64 +2421,62 @@ const BrandMark = ({
 
 
       {/* NAV */}
-      <nav className="fixed left-0 right-0 z-[150] px-6 pt-4"
-     style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px))' }}>
+<nav
+  className="fixed left-0 right-0 z-[150] px-6"
+  style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px))' }}
+>
+  <div
+    className="relative max-w-md mx-auto mb-4 rounded-[2.9rem] border border-white/12 shadow-[0_24px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
+    style={{
+      background: 'rgba(7,11,20,0.88)', // ✅ fundo escuro consistente
+      paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
+      paddingTop: '0.75rem',
+      paddingLeft: '0.75rem',
+      paddingRight: '0.75rem',
+    }}
+  >
+    {/* noise (opcional) */}
+    <div className="pointer-events-none absolute inset-0 opacity-[0.10] app-noise rounded-[2.9rem]" />
+    {/* leve gradiente para “segurar” sobre imagens claras */}
+    <div className="pointer-events-none absolute inset-0 rounded-[2.9rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(0,0,0,0.00))]" />
 
-<div className="rounded-[2.9rem] ... flex justify-around items-center p-3 ... mb-4"
-     style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
+    <div className="relative flex justify-around items-center">
+      {[
+        { id: 'home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+        { id: 'templates', icon: 'M9 12h6m-6 4h6m-7 4h8a2 2 0 002-2V6a2 2 0 00-2-2H8a2 2 0 00-2 2v12a2 2 0 002 2z' },
+        { id: 'train', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+        { id: 'calendar', icon: 'M8 7V5m8 2V5M4 9h16m-2 12H6a2 2 0 01-2-2V9a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2z' },
+        { id: 'history', icon: 'M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+      ].map((tab) => (
+        <button
+          key={tab.id}
+          onClick={() => setActiveTab(tab.id as any)}
+          className={`relative flex flex-col items-center p-3 transition-all duration-300 rounded-2xl ${
+            activeTab === tab.id ? 'text-[#071018]' : 'text-slate-300'
+          }`}
+        >
+          <span
+            className={`mb-1 h-10 w-10 rounded-2xl flex items-center justify-center transition-all border ${
+              activeTab === tab.id
+                ? 'bg-[linear-gradient(135deg,#22c55e,#a3e635)] border-emerald-200/40 shadow-[0_16px_50px_rgba(34,197,94,0.18)]'
+                : 'bg-white/6 border-white/10'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={activeTab === tab.id ? 2.8 : 2}
+                d={tab.icon}
+              />
+            </svg>
+          </span>
+        </button>
+      ))}
+    </div>
+  </div>
+</nav>
 
-          <div className="absolute inset-0 opacity-[0.12] app-noise" />
-          {[
-            {
-              id: 'home',
-              icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
-            },
-            {
-              id: 'templates',
-              icon: 'M9 12h6m-6 4h6m-7 4h8a2 2 0 002-2V6a2 2 0 00-2-2H8a2 2 0 00-2 2v12a2 2 0 002 2z',
-            },
-            { id: 'train', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
-            {
-              id: 'calendar',
-              icon: 'M8 7V5m8 2V5M4 9h16m-2 12H6a2 2 0 01-2-2V9a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2z',
-            },
-            {
-              id: 'history',
-              icon: 'M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-            },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`relative flex flex-col items-center p-3 transition-all duration-300 rounded-2xl ${
-                activeTab === tab.id ? 'text-[#071018]' : 'text-slate-300'
-              }`}
-            >
-              <span
-                className={`mb-1 h-10 w-10 rounded-2xl flex items-center justify-center transition-all border ${
-                  activeTab === tab.id
-                    ? 'bg-[linear-gradient(135deg,#22c55e,#a3e635)] border-emerald-200/40 shadow-[0_16px_50px_rgba(34,197,94,0.18)]'
-                    : 'bg-white/5 border-white/10'
-                }`}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={activeTab === tab.id ? 2.8 : 2}
-                    d={tab.icon}
-                  />
-                </svg>
-              </span>
-            </button>
-          ))}
-        </div>
-      </nav>
 
       <style jsx global>{`
         html,
