@@ -207,7 +207,7 @@ const BrandMark = ({ sizePx = 40 }: { sizePx?: number }) => (
 );
 
 // --- COLAR ESTA FUNÇÃO DE IMAGENS LOGO ABAIXO DO LOGO ---
-const getExerciseImage = (name) => {
+const getExerciseImage = (name: string) => {
   const n = name?.toLowerCase() || '';
   if (
     n.includes('supino') ||
