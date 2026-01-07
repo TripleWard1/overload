@@ -3,6 +3,7 @@
 import Head from 'next/head';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Inter, Space_Grotesk } from 'next/font/google';
+import React from 'react';
 
 /* -------------------- FONTS (premium) -------------------- */
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -77,63 +78,8 @@ const HERO_LOGO_PX = 140; // <<< aumenta para 64/72 se quiseres ainda maior
 const TAB_LOGO_PX = 42;
 const HEADER_LOGO_PX = 48;
 
-/* -------------------- IMAGE POOL (100+ placeholders) -------------------- */
-// pool grande (determinístico por seed), não “quebra” como imagens partidas
-const WORKOUT_IMAGE_POOL: string[] = Array.from({ length: 140 }, (_, i) => {
-  // mistura de queries para variedade (source.unsplash.com aguenta bem placeholders)
-  const q =
-    i % 7 === 0
-      ? 'gym'
-      : i % 7 === 1
-      ? 'fitness'
-      : i % 7 === 2
-      ? 'workout'
-      : i % 7 === 3
-      ? 'weightlifting'
-      : i % 7 === 4
-      ? 'barbell'
-      : i % 7 === 5
-      ? 'dumbbell'
-      : 'training';
-  return `https://source.unsplash.com/featured/900x700?${q}&sig=${i + 10}`;
-});
 
-const KEYWORD_MAP: Array<{ keys: string[]; img: string }> = [
-  {
-    keys: ['push', 'peito', 'supino', 'chest'],
-    img: `https://source.unsplash.com/featured/900x700?benchpress&sig=9991`,
-  },
-  {
-    keys: ['pull', 'costas', 'remada', 'back'],
-    img: `https://source.unsplash.com/featured/900x700?backworkout&sig=9992`,
-  },
-  {
-    keys: ['legs', 'perna', 'agach', 'squat'],
-    img: `https://source.unsplash.com/featured/900x700?squat&sig=9993`,
-  },
-  {
-    keys: ['ombro', 'shoulder'],
-    img: `https://source.unsplash.com/featured/900x700?shoulderworkout&sig=9994`,
-  },
-  {
-    keys: ['abs', 'abdom', 'core'],
-    img: `https://source.unsplash.com/featured/900x700?absworkout&sig=9995`,
-  },
-  {
-    keys: ['cardio', 'corrida', 'run'],
-    img: `https://source.unsplash.com/featured/900x700?running&sig=9996`,
-  },
-  {
-    keys: ['upper', 'upper power'],
-    img: `https://source.unsplash.com/featured/900x700?upperbodyworkout&sig=9997`,
-  },
-  {
-    keys: ['full', 'full body', 'total'],
-    img: `https://source.unsplash.com/featured/900x700?fullbodyworkout&sig=9998`,
-  },
-];
 
-/* -------------------- UTILS -------------------- */
 const normalizeName = (raw: string) => {
   const trimmed = (raw ?? '').trim();
   const collapsed = trimmed.replace(/\s+/g, ' ');
@@ -141,24 +87,136 @@ const normalizeName = (raw: string) => {
   return lowered.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 };
 
+/* -------------------- IMAGE POOL (ONLINE • GYM ONLY • ESTÁVEL) -------------------- */
+
+/**
+ * ✅ Estratégia:
+ * - Em vez de /featured ou search aleatório, usamos "collections" do Unsplash:
+ *   https://source.unsplash.com/collection/{ID}/1200x800?sig=...
+ * - Isto mantém o conteúdo MUITO mais "gym-only"
+ * - O ?sig=... torna determinístico (não muda a cada refresh)
+ *
+ * NOTA: se quiseres, posso ajustar/trocar IDs para coleções ainda mais “hard gym”.
+ */
+
+const UNSPLASH_COLLECTIONS = {
+  gym: [483251, 1163637, 139386, 3694365],
+  benchpress: [139386, 483251],
+  back: [1163637, 3694365],
+  squat: [3694365, 139386],
+  deadlift: [3694365, 139386],
+  shoulders: [1163637, 483251],
+  arms: [483251, 139386],
+  abs: [483251],
+  cardio: [1163637],
+  machines: [1163637],
+  crossfit: [3694365],
+  bodybuilding: [139386],
+  dumbbell: [483251, 1163637],
+  barbell: [139386, 3694365],
+} as const;
+
+type ImgCategory = keyof typeof UNSPLASH_COLLECTIONS;
+
+const ucol = (collectionId: number, sig: number) =>
+  `https://source.unsplash.com/collection/${collectionId}/1200x800?sig=${sig}`;
+
+/** ✅ Base organizada por categorias (total ~520 imagens) */
+const IMAGES_BY_CATEGORY: Record<ImgCategory, string[]> = (() => {
+  const build = (cat: ImgCategory, count: number) => {
+    const cols = UNSPLASH_COLLECTIONS[cat];
+    return Array.from({ length: count }, (_, i) => {
+      const col = cols[i % cols.length];
+      return ucol(col, 1000 + i * 7 + cols.length);
+    });
+  };
+
+  return {
+    gym: build('gym', 200),
+    benchpress: build('benchpress', 40),
+    back: build('back', 45),
+    squat: build('squat', 45),
+    deadlift: build('deadlift', 35),
+    shoulders: build('shoulders', 30),
+    arms: build('arms', 30),
+    abs: build('abs', 20),
+    cardio: build('cardio', 20),
+    machines: build('machines', 20),
+    crossfit: build('crossfit', 10),
+    bodybuilding: build('bodybuilding', 10),
+    dumbbell: build('dumbbell', 10),
+    barbell: build('barbell', 10),
+  };
+})();
+
+/** ✅ Pool geral (≈520 urls) */
+const WORKOUT_IMAGE_POOL: string[] = Object.values(IMAGES_BY_CATEGORY).flat();
+
+/**
+ * ✅ KEYWORD_MAP: agora aponta para CATEGORIAS (mais preciso),
+ * e só no fim escolhe imagem dentro dessa categoria
+ */
+const KEYWORD_MAP: Array<{ keys: string[]; cat: ImgCategory }> = [
+  { keys: ['push', 'peito', 'supino', 'chest', 'bench'], cat: 'benchpress' },
+  { keys: ['pull', 'costas', 'remada', 'back', 'row', 'lat', 'puxada'], cat: 'back' },
+
+  { keys: ['legs', 'perna', 'agach', 'squat', 'quad', 'glute'], cat: 'squat' },
+  { keys: ['deadlift', 'terra', 'levantamento'], cat: 'deadlift' },
+
+  { keys: ['ombro', 'shoulder', 'militar', 'deltoid'], cat: 'shoulders' },
+  { keys: ['braço', 'braco', 'arm', 'bicep', 'tricep', 'rosca'], cat: 'arms' },
+
+  { keys: ['abs', 'abdom', 'core'], cat: 'abs' },
+  { keys: ['cardio', 'corrida', 'run', 'treadmill', 'bike'], cat: 'cardio' },
+
+  { keys: ['machine', 'máquina', 'maquina', 'cable', 'pulley'], cat: 'machines' },
+  { keys: ['crossfit', 'wod', 'functional'], cat: 'crossfit' },
+  { keys: ['bodybuilding', 'physique'], cat: 'bodybuilding' },
+
+  { keys: ['dumbbell', 'halter'], cat: 'dumbbell' },
+  { keys: ['barbell', 'barra', 'plates', 'peso'], cat: 'barbell' },
+
+  { keys: ['upper', 'upper power'], cat: 'gym' },
+  { keys: ['full', 'full body', 'total'], cat: 'gym' },
+];
+
+/* -------------------- UTILS (imagem com fallback) -------------------- */
+
+const FALLBACK_IMG = BRAND_HERO_COVER_URL;
+
+const imgFallback = (e: React.SyntheticEvent<HTMLImageElement>) => {
+  const img = e.currentTarget;
+  // evita loop infinito se o fallback também falhar
+  if (img.dataset.fallbackApplied === '1') return;
+  img.dataset.fallbackApplied = '1';
+  img.src = FALLBACK_IMG;
+};
+
+
+/** ✅ hash determinístico (mantém sempre a mesma imagem por seed) */
 const hashSeed = (seed: string) => {
   const s = normalizeName(seed);
   let h = 2166136261;
-  for (let i = 0; i < s.length; i++)
-    h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return h >>> 0 || 1;
 };
 
+/** ✅ escolhe categoria por keywords e depois escolhe imagem dentro dessa categoria */
 const pickImageFor = (seed: string) => {
   const n = normalizeName(seed);
-  const m = KEYWORD_MAP.find((x) =>
+
+  const matched = KEYWORD_MAP.find((x) =>
     x.keys.some((k) => n.includes(normalizeName(k)))
   );
-  if (m) return m.img;
 
-  const idx = hashSeed(seed) % WORKOUT_IMAGE_POOL.length;
-  return WORKOUT_IMAGE_POOL[idx];
+  const cat: ImgCategory = matched?.cat ?? 'gym';
+  const pool = IMAGES_BY_CATEGORY[cat] ?? WORKOUT_IMAGE_POOL;
+
+  const idx = hashSeed(seed) % pool.length;
+  return pool[idx] || FALLBACK_IMG;
 };
+
+
 
 const formatDatePT = (iso: string) =>
   new Date(iso).toLocaleDateString('pt-PT', {
@@ -197,14 +255,6 @@ const formatDuration = (seconds: number) => {
   const pad = (x: number) => String(x).padStart(2, '0');
   return hh > 0 ? `${pad(hh)}:${pad(mm)}:${pad(ss)}` : `${pad(mm)}:${pad(ss)}`;
 };
-
-// (legacy) BrandMark antigo — mantido para não apagar nada fora do referido,
-// mas desativado para evitar conflito com o BrandMark premium (mais abaixo).
-const BrandMark = ({ sizePx = 40 }: { sizePx?: number }) => (
-  <span style={{ display: 'none' }} aria-hidden="true" data-legacy-brandmark>
-    {sizePx}
-  </span>
-);
 
 // --- COLAR ESTA FUNÇÃO DE IMAGENS LOGO ABAIXO DO LOGO ---
 const getExerciseImage = (name: string) => {
@@ -300,7 +350,10 @@ export default function GymApp() {
   const [addonNotes, setAddonNotes] = useState('');
 
   /* -------------------- LOAD / SYNC -------------------- */
-  useEffect(() => {
+const [hydrated, setHydrated] = useState(false);
+
+useEffect(() => {
+  try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) setSessions(JSON.parse(saved));
 
@@ -309,22 +362,28 @@ export default function GymApp() {
 
     const savedTemplates = localStorage.getItem(STORAGE_KEY_TEMPLATES);
     if (savedTemplates) setTemplates(JSON.parse(savedTemplates));
-  }, []);
+  } catch (e) {
+    console.error('Erro a ler localStorage', e);
+  } finally {
+    setHydrated(true);
+  }
+}, []);
 
-  useEffect(
-    () => localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions)),
-    [sessions]
-  );
-  useEffect(
-    () =>
-      localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(exerciseStats)),
-    [exerciseStats]
-  );
-  useEffect(
-    () =>
-      localStorage.setItem(STORAGE_KEY_TEMPLATES, JSON.stringify(templates)),
-    [templates]
-  );
+useEffect(() => {
+  if (!hydrated) return;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+}, [hydrated, sessions]);
+
+useEffect(() => {
+  if (!hydrated) return;
+  localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(exerciseStats));
+}, [hydrated, exerciseStats]);
+
+useEffect(() => {
+  if (!hydrated) return;
+  localStorage.setItem(STORAGE_KEY_TEMPLATES, JSON.stringify(templates));
+}, [hydrated, templates]);
+
 
   useEffect(() => {
     if (restTimer === 0 || restTimer === null) {
@@ -840,10 +899,10 @@ export default function GymApp() {
   const saveTemplate = () => {
     const name = templateNameInput.trim().replace(/\s+/g, ' ');
     if (!name) return;
-
+  
     const normalizedName = normalizeName(name);
     const updatedAt = new Date().toISOString();
-
+  
     const cleanedExercises = templateDraftExercises
       .map((e) => ({
         ...e,
@@ -851,22 +910,20 @@ export default function GymApp() {
         normalizedName: normalizeName(e.displayName),
         targetSets: Math.max(1, Number(e.targetSets || 1)),
         targetReps:
-          typeof e.targetReps === 'number'
-            ? Number(e.targetReps)
-            : e.targetReps,
+          typeof e.targetReps === 'number' ? Number(e.targetReps) : e.targetReps,
         restSeconds:
           typeof e.restSeconds === 'number'
             ? Number(e.restSeconds)
             : e.restSeconds,
       }))
       .filter((e) => e.normalizedName);
-
+  
     setTemplates((prev) => {
       const isNew = selectedTemplateId === 'NEW' || !selectedTemplateId;
       const existingIdx = !isNew
         ? prev.findIndex((t) => t.id === selectedTemplateId)
         : -1;
-
+  
       const tpl: WorkoutTemplate = {
         id: isNew
           ? crypto.randomUUID()
@@ -876,7 +933,7 @@ export default function GymApp() {
         updatedAt,
         exercises: cleanedExercises,
       };
-
+  
       if (existingIdx >= 0) {
         const copy = [...prev];
         copy[existingIdx] = tpl;
@@ -885,10 +942,8 @@ export default function GymApp() {
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         );
       }
-
-      const sameNameIdx = prev.findIndex(
-        (t) => t.normalizedName === normalizedName
-      );
+  
+      const sameNameIdx = prev.findIndex((t) => t.normalizedName === normalizedName);
       if (sameNameIdx >= 0) {
         const copy = [...prev];
         copy[sameNameIdx] = { ...tpl, id: copy[sameNameIdx].id };
@@ -897,10 +952,21 @@ export default function GymApp() {
             new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
         );
       }
-
+  
       return [tpl, ...prev];
     });
+  
+    // ✅ ISTO É O PONTO 2 (ADICIONAR AQUI)
+    setShowSuccessToast(true);
+    setTimeout(() => setShowSuccessToast(false), 1600);
+  
+    // ✅ voltar para a lista de treinos (fecha editor)
+    setSelectedTemplateId(null);
+    setTemplateNameInput('');
+    setTemplateDraftExercises([]);
+    setExerciseInput('');
   };
+  
 
   /* -------------------- SHARED UI -------------------- */
 const BrandMark = ({
@@ -1025,7 +1091,7 @@ const BrandMark = ({
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                   <div className="flex items-center">
-  <div className="relative inline-flex">
+                  <div className="relative inline-flex overflow-hidden">
     {/* glow claro atrás */}
     <div className="absolute -inset-3 rounded-[2.25rem] bg-white/25 blur-[12px]" />
 
@@ -1082,14 +1148,14 @@ const BrandMark = ({
                 <div className="mt-5 card-soft rounded-[1.9rem] p-4 flex items-center gap-4 overflow-hidden relative">
                   <div className="absolute inset-0 opacity-[0.08] app-noise" />
                   <div className="relative h-14 w-14 rounded-2xl overflow-hidden border border-white/10">
-                    <img
-                      src={pickImageFor(topExercise?.displayName || 'gym')}
-                      alt="Sugestão"
-                      className="h-full w-full object-cover"
-                      referrerPolicy="no-referrer"
-                      crossOrigin="anonymous"
-                      draggable={false}
-                    />
+                  <img
+  src={pickImageFor(topExercise?.displayName || 'gym')}
+  alt="Sugestão"
+  className="h-full w-full object-cover"
+  onError={imgFallback}
+  draggable={false}
+/>
+
                     <div className="absolute inset-0 bg-black/25" />
                   </div>
                   <div className="relative min-w-0 flex-1">
@@ -1322,14 +1388,14 @@ const BrandMark = ({
                         className="card-premium rounded-[2rem] overflow-hidden"
                       >
                         <div className="relative h-28">
-                          <img
-                            src={thumb}
-                            alt={t.displayName}
-                            className="h-full w-full object-cover"
-                            referrerPolicy="no-referrer"
-                            crossOrigin="anonymous"
-                            draggable={false}
-                          />
+                        <img
+  src={thumb}
+  alt={t.displayName}
+  className="h-full w-full object-cover"
+  onError={imgFallback}
+  draggable={false}
+/>
+
                           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.10),rgba(7,11,20,0.92))]" />
                           <div className="absolute inset-0 opacity-[0.10] app-noise" />
                           <div className="absolute left-4 bottom-3">
@@ -1774,14 +1840,14 @@ const BrandMark = ({
                 >
                   {/* cover */}
                   <div className="relative h-24">
-                    <img
-                      src={thumb}
-                      alt={ex.name}
-                      className="h-full w-full object-cover"
-                      referrerPolicy="no-referrer"
-                      crossOrigin="anonymous"
-                      draggable={false}
-                    />
+                  <img
+  src={thumb}
+  alt={ex.name}
+  className="h-full w-full object-cover"
+  onError={imgFallback}
+  draggable={false}
+/>
+
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.10),rgba(7,11,20,0.92))]" />
                     <div className="absolute inset-0 opacity-[0.10] app-noise" />
                     <div className="absolute left-5 bottom-3 right-5">
@@ -2406,10 +2472,14 @@ const BrandMark = ({
       </nav>
 
       <style jsx global>{`
-        body {
-          background: #070b14;
-          color: #e5e7eb;
-          -webkit-tap-highlight-color: transparent;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;          /* ✅ corta o scroll horizontal */
+        overscroll-behavior-x: none; /* ✅ evita “puxar” para os lados */
+        touch-action: pan-y;         /* ✅ só permite scroll vertical */
+        background: #070b14;
+        color: #e5e7eb;
+        -webkit-tap-highlight-color: transparent;
         }
 
         .animate-in {
