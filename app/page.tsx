@@ -998,16 +998,18 @@ const BrandMark = ({
   /* -------------------- RENDER -------------------- */
   return (
     <main
-      className={[
-        'app-shell max-w-md mx-auto min-h-screen overflow-x-hidden pb-36 text-slate-100',
-        inter.variable,
-        grotesk.variable,
-      ].join(' ')}
-      style={{
-        fontFamily:
-          'var(--font-inter), system-ui, -apple-system, Segoe UI, Roboto, Arial',
-      }}
-    >
+  className={[
+    'app-shell max-w-md mx-auto min-h-screen pb-36 text-slate-100',
+    inter.variable,
+    grotesk.variable,
+  ].join(' ')}
+  style={{
+    fontFamily:
+      'var(--font-inter), system-ui, -apple-system, Segoe UI, Roboto, Arial',
+    overflowX: 'clip', // ✅ melhor que hidden no mobile
+  }}
+>
+
       <Head>
         <title>{BRAND_NAME}</title>
         <meta name="application-name" content={BRAND_NAME} />
@@ -1030,7 +1032,8 @@ const BrandMark = ({
 
       {/* REST TIMER OVERLAY */}
       {restTimer !== null && restTimer > 0 && (
-        <div className="fixed top-4 inset-x-4 z-[200]">
+  <div className="fixed left-0 right-0 z-[200] pointer-events-none" style={{ top: 'max(1rem, env(safe-area-inset-top, 0px))' }}>
+    <div className="px-4 pointer-events-auto">
           <div className="card-premium rounded-[1.75rem] px-4 py-4 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl text-[#071018] flex items-center justify-center font-black shadow-lg bg-[linear-gradient(135deg,#22c55e,#a3e635)]">
@@ -1063,8 +1066,10 @@ const BrandMark = ({
               </button>
             </div>
           </div>
-        </div>
-      )}
+          </div>
+  </div>
+)}
+
 
       {/* HOME */}
       {activeTab === 'home' && (
@@ -1780,7 +1785,7 @@ const BrandMark = ({
                   </div>
                 </div>
 
-                <div className="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                <div className="mt-3 flex items-center gap-2 overflow-x-hidden flex-wrap">
                   <button
                     onClick={() => setAddonAbs((v) => !v)}
                     className={`shrink-0 px-4 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest border active:scale-95 ${
@@ -2416,8 +2421,12 @@ const BrandMark = ({
 
 
       {/* NAV */}
-      <nav className="fixed bottom-0 left-0 right-0 z-[150] px-6 pb-10 pt-4">
-        <div className="rounded-[2.9rem] bg-[#070B14]/72 backdrop-blur-2xl border border-white/10 shadow-[0_26px_110px_rgba(0,0,0,0.55)] flex justify-around items-center p-3 relative overflow-hidden">
+      <nav className="fixed left-0 right-0 z-[150] px-6 pt-4"
+     style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px))' }}>
+
+<div className="rounded-[2.9rem] ... flex justify-around items-center p-3 ... mb-4"
+     style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
+
           <div className="absolute inset-0 opacity-[0.12] app-noise" />
           {[
             {
@@ -2472,31 +2481,41 @@ const BrandMark = ({
       </nav>
 
       <style jsx global>{`
-        width: 100%;
-        max-width: 100%;
-        overflow-x: hidden;          /* ✅ corta o scroll horizontal */
-        overscroll-behavior-x: none; /* ✅ evita “puxar” para os lados */
-        touch-action: pan-y;         /* ✅ só permite scroll vertical */
-        background: #070b14;
-        color: #e5e7eb;
-        -webkit-tap-highlight-color: transparent;
+        html,
+        body {
+          width: 100%;
+          max-width: 100%;
+          overflow-x: hidden;          /* fallback */
+          overscroll-behavior-x: none; /* evita puxar para os lados */
+          background: #070b14;
+          color: #e5e7eb;
+          -webkit-tap-highlight-color: transparent;
         }
-
+        
+        .app-shell {
+          width: 100%;
+          max-width: 100%;
+          overflow-x: clip;            /* ✅ bloqueia scroll lateral MESMO em mobile */
+          overscroll-behavior-x: none;
+          touch-action: pan-y;         /* ✅ só permite scroll vertical */
+        }
+        
         .animate-in {
-          animation: slideUp 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+          animation: fadeIn 0.35s ease-out;
           animation-fill-mode: both;
         }
         
-        @keyframes slideUp {
+        @keyframes fadeIn {
           from {
             opacity: 0;
-            transform: translateY(14px);
+            filter: blur(2px);
           }
           to {
             opacity: 1;
-            transform: none; /* ✅ importante: remove o containing block do "fixed" */
+            filter: none;
           }
         }
+        
 
         input::placeholder {
           color: #64748b;
