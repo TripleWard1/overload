@@ -1793,8 +1793,8 @@ useEffect(() => {
           </div>
 
           {deleteTemplateId && (
-            <div className="fixed inset-0 z-[260] bg-black/55 backdrop-blur-sm p-4">
-              <div className="max-w-md mx-auto mt-24 rounded-[2.25rem] card-premium p-6">
+  <div className="fixed inset-0 z-[260] modal-overlay p-4">
+    <div className="max-w-md mx-auto mt-24 modal-panel rounded-[2.25rem] p-6">
                 <div className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-300">
                   Confirmação
                 </div>
@@ -1820,7 +1820,7 @@ useEffect(() => {
                   </button>
                   <button
                     onClick={() => removeTemplate(deleteTemplateId)}
-                    className="flex-1 bg-rose-500 text-white rounded-2xl px-4 py-3 font-black text-[10px] uppercase tracking-widest active:scale-95"
+                    className="flex-1 bg-rose-500 text-white rounded-2xl px-4 py-3 font-black text-[10px] uppercase tracking-widest active:scale-95 shadow-[0_18px_50px_rgba(244,63,94,0.25)] border border-rose-300/20"
                   >
                     Remover
                   </button>
@@ -2389,9 +2389,9 @@ useEffect(() => {
 )}
 
 
-          {deleteSessionId && (
-            <div className="fixed inset-0 z-[260] bg-black/55 backdrop-blur-sm p-4">
-              <div className="max-w-md mx-auto mt-24 card-premium rounded-[2.25rem] p-6">
+{deleteSessionId && (
+  <div className="fixed inset-0 z-[260] modal-overlay p-4">
+    <div className="max-w-md mx-auto mt-24 modal-panel rounded-[2.25rem] p-6">
                 <div className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-300">
                   Confirmação
                 </div>
@@ -2416,7 +2416,7 @@ useEffect(() => {
                   </button>
                   <button
                     onClick={() => removeSession(deleteSessionId)}
-                    className="flex-1 bg-rose-500 text-white rounded-2xl px-4 py-3 font-black text-[10px] uppercase tracking-widest active:scale-95"
+                    className="flex-1 bg-rose-500 text-white rounded-2xl px-4 py-3 font-black text-[10px] uppercase tracking-widest active:scale-95 shadow-[0_18px_50px_rgba(244,63,94,0.25)] border border-rose-300/20"
                   >
                     Remover
                   </button>
@@ -2774,7 +2774,7 @@ useEffect(() => {
   
   .modal-panel {
     /* mais opaco para nunca “desaparecer” */
-    background: rgba(7, 11, 20, 0.92);
+    background: rgba(7, 11, 20, 0.94);
     border: 1px solid rgba(255, 255, 255, 0.10);
   
     /* força composição correta no iOS */
