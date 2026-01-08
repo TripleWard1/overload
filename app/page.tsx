@@ -2291,108 +2291,103 @@ useEffect(() => {
             </div>
           )}
 
-          {selectedSession && (
-            <div className="fixed inset-0 z-[250] bg-black/55 backdrop-blur-sm p-4">
-              <div className="max-w-md mx-auto mt-6 card-premium rounded-[2.75rem] overflow-hidden">
-                <div className="p-6 border-b border-white/10">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
-                        Sessão
-                      </div>
-                      <div
-                        className="text-2xl font-black italic uppercase tracking-tighter truncate mt-2 text-white"
-                        style={{
-                          fontFamily:
-                            'var(--font-grotesk), var(--font-inter), system-ui',
-                        }}
-                      >
-                        {selectedSession.name}
-                      </div>
-                      <div className="text-[10px] text-slate-300 font-mono uppercase mt-2">
-                        {formatDatePT(selectedSession.startedAt)} •{' '}
-                        {formatTimePT(selectedSession.startedAt)}
-                        {typeof selectedSession.durationSeconds === 'number' &&
-                          selectedSession.durationSeconds > 0 && (
-                            <span className="ml-2 text-slate-300">
-                              •{' '}
-                              {Math.round(selectedSession.durationSeconds / 60)}{' '}
-                              min
-                            </span>
-                          )}
-                        {selectedSession.addons?.abs && (
-                          <span className="ml-2 text-emerald-300">• ABS</span>
-                        )}
-                        {selectedSession.addons?.cardio && (
-                          <span className="ml-2 text-sky-300">• CARDIO</span>
-                        )}
-                      </div>
+{selectedSession && (
+  <div className="fixed inset-0 z-[250] modal-overlay p-4">
+    <div className="max-w-md mx-auto mt-6 modal-panel rounded-[2.75rem] overflow-hidden">
+      <div className="p-6 border-b border-white/10">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
+              Sessão
+            </div>
 
-                      {selectedSession.addons?.notes && (
-                        <div className="mt-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs text-slate-100">
-                          <div className="text-[10px] font-black uppercase tracking-widest text-slate-300 mb-1">
-                            Notas
-                          </div>
-                          {selectedSession.addons.notes}
-                        </div>
-                      )}
-                    </div>
+            <div
+              className="text-2xl font-black italic uppercase tracking-tighter truncate mt-2 text-white"
+              style={{
+                fontFamily: 'var(--font-grotesk), var(--font-inter), system-ui',
+              }}
+            >
+              {selectedSession.name}
+            </div>
 
-                    <div className="flex flex-col gap-2">
-                      <button
-                        onClick={() => setSelectedSessionId(null)}
-                        className="btn-soft px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95"
-                      >
-                        Fechar
-                      </button>
-                      <button
-                        onClick={() => setDeleteSessionId(selectedSession.id)}
-                        className="bg-rose-500 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95"
-                      >
-                        Remover
-                      </button>
-                    </div>
+            <div className="text-[10px] text-slate-300 font-mono uppercase mt-2">
+              {formatDatePT(selectedSession.startedAt)} • {formatTimePT(selectedSession.startedAt)}
+              {typeof selectedSession.durationSeconds === 'number' &&
+                selectedSession.durationSeconds > 0 && (
+                  <span className="ml-2 text-slate-300">
+                    • {Math.round(selectedSession.durationSeconds / 60)} min
+                  </span>
+                )}
+              {selectedSession.addons?.abs && (
+                <span className="ml-2 text-emerald-300">• ABS</span>
+              )}
+              {selectedSession.addons?.cardio && (
+                <span className="ml-2 text-sky-300">• CARDIO</span>
+              )}
+            </div>
+
+            {selectedSession.addons?.notes && (
+              <div className="mt-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-xs text-slate-100">
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-300 mb-1">
+                  Notas
+                </div>
+                {selectedSession.addons.notes}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => setSelectedSessionId(null)}
+              className="btn-soft px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95"
+            >
+              Fechar
+            </button>
+            <button
+              onClick={() => setDeleteSessionId(selectedSession.id)}
+              className="bg-rose-500 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95"
+            >
+              Remover
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-6 modal-scroll">
+        {selectedSession.exercises.map((ex) => (
+          <div
+            key={ex.id}
+            className="bg-white/5 border border-white/10 rounded-[2rem] p-5"
+          >
+            <div className="text-white font-black italic uppercase tracking-tighter">
+              {ex.name}
+            </div>
+            <div className="mt-3 space-y-2">
+              {ex.sets.map((set, i) => (
+                <div
+                  key={set.id}
+                  className="flex items-center justify-between text-xs font-bold text-slate-100"
+                >
+                  <div className="text-slate-300 font-black">Set {i + 1}</div>
+                  <div className="font-black">
+                    {(set.weightKg || 0) > 0 ? `${set.weightKg} kg` : '--'} ×{' '}
+                    {(set.reps || 0) > 0 ? `${set.reps}` : '--'}
+                    {set.completed && (
+                      <span className="ml-2 text-[10px] font-black uppercase text-emerald-300">
+                        ✓
+                      </span>
+                    )}
                   </div>
                 </div>
-
-                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-                  {selectedSession.exercises.map((ex) => (
-                    <div
-                      key={ex.id}
-                      className="bg-white/5 border border-white/10 rounded-[2rem] p-5"
-                    >
-                      <div className="text-white font-black italic uppercase tracking-tighter">
-                        {ex.name}
-                      </div>
-                      <div className="mt-3 space-y-2">
-                        {ex.sets.map((set, i) => (
-                          <div
-                            key={set.id}
-                            className="flex items-center justify-between text-xs font-bold text-slate-100"
-                          >
-                            <div className="text-slate-300 font-black">
-                              Set {i + 1}
-                            </div>
-                            <div className="font-black">
-                              {(set.weightKg || 0) > 0
-                                ? `${set.weightKg} kg`
-                                : '--'}{' '}
-                              × {(set.reps || 0) > 0 ? `${set.reps}` : '--'}
-                              {set.completed && (
-                                <span className="ml-2 text-[10px] font-black uppercase text-emerald-300">
-                                  ✓
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
-          )}
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
+
 
           {deleteSessionId && (
             <div className="fixed inset-0 z-[260] bg-black/55 backdrop-blur-sm p-4">
@@ -2743,6 +2738,62 @@ useEffect(() => {
       font-size: 14px !important; /* ajusta se quiseres */
     }
   }
+
+  /* ✅ iOS: garantir backdrop-filter */
+  .card-premium {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow: 0 26px 110px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+  
+  .card-soft {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  
+  .btn-soft {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    color: #ffffff;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.30);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  
+  /* ✅ FIX do modal "transparente" no iOS */
+  .modal-overlay {
+    background: rgba(0, 0, 0, 0.60);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    isolation: isolate;
+  }
+  
+  .modal-panel {
+    /* mais opaco para nunca “desaparecer” */
+    background: rgba(7, 11, 20, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+  
+    /* força composição correta no iOS */
+    transform: translateZ(0);
+    will-change: transform;
+  
+    /* mantém o teu look premium */
+    box-shadow: 0 26px 110px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+  
+  .modal-scroll {
+    max-height: 70vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+
 `}</style>
 
       {/* --- COLA ISTO ANTES DO </main> --- */}
