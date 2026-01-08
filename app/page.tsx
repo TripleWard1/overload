@@ -2561,6 +2561,7 @@ useEffect(() => {
           background: #070b14;
           color: #e5e7eb;
           -webkit-tap-highlight-color: transparent;
+          -webkit-text-size-adjust: 100%;
         }
         
         .app-shell {
@@ -2724,6 +2725,16 @@ useEffect(() => {
   color: rgba(203, 213, 225, 0.92);
   text-shadow: 0 2px 10px rgba(0,0,0,0.45);
 }
+
+/* --- iOS / mobile: evitar auto-zoom ao focar inputs --- */
+@media (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 
       `}</style>
       {/* --- COLA ISTO ANTES DO </main> --- */}
