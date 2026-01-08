@@ -66,7 +66,8 @@ const BRAND_NAME = 'Overload';
 const BRAND_FAVICON_URL = 'https://i.imgur.com/jROIhp2.png';
 
 // ✅ logo transparente (o que pediste)
-const BRAND_LOGO_URL = 'https://i.imgur.com/jROIhp2.png';
+const BRAND_LOGO_URL = '/icon.png';
+
 
 // ✅ capa do hero (imagem de fundo do header)
 const BRAND_HERO_COVER_URL =
