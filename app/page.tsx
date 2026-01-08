@@ -1023,30 +1023,46 @@ useEffect(() => {
   
 
   /* -------------------- SHARED UI -------------------- */
-const BrandMark = ({
-  sizePx,
-  widthPx,
-  heightPx,
-}: {
-  sizePx?: number;     // ✅ para <BrandMark sizePx={...} />
-  widthPx?: number;    // ✅ para <BrandMark widthPx={...} />
-  heightPx?: number;   // ✅ para <BrandMark heightPx={...} />
-}) => {
-  const w = typeof widthPx === 'number' ? widthPx : typeof sizePx === 'number' ? sizePx : 64;
-  const h = typeof heightPx === 'number' ? heightPx : typeof sizePx === 'number' ? sizePx : 64;
-
-  return (
-    <img
-      src={BRAND_LOGO_URL}
-      alt={BRAND_NAME}
-      referrerPolicy="no-referrer"
-      crossOrigin="anonymous"
-      draggable={false}
-      className="object-contain drop-shadow-[0_10px_24px_rgba(0,0,0,0.55)]"
-      style={{ width: w, height: h }}
-    />
-  );
-};
+  const BrandMark = ({
+    sizePx,
+    widthPx,
+    heightPx,
+  }: {
+    sizePx?: number;
+    widthPx?: number;
+    heightPx?: number;
+  }) => {
+    const w =
+      typeof widthPx === 'number'
+        ? widthPx
+        : typeof sizePx === 'number'
+        ? sizePx
+        : 64;
+  
+    const h =
+      typeof heightPx === 'number'
+        ? heightPx
+        : typeof sizePx === 'number'
+        ? sizePx
+        : 64;
+  
+    return (
+      <img
+        src={BRAND_LOGO_URL}
+        alt="Overload logo"
+        style={{ width: w, height: h, display: 'block' }}
+        className="object-contain drop-shadow-[0_10px_24px_rgba(0,0,0,0.55)]"
+        referrerPolicy="no-referrer"
+        crossOrigin="anonymous"
+        loading="eager"
+        draggable={false}
+        onError={() => {
+          console.log('❌ LOGO NÃO CARREGOU:', BRAND_LOGO_URL);
+        }}
+      />
+    );
+  };
+  
 
 
   /* -------------------- RENDER -------------------- */
