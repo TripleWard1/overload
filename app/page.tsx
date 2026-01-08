@@ -66,7 +66,7 @@ const BRAND_NAME = 'Overload';
 const BRAND_FAVICON_URL = 'https://i.imgur.com/jROIhp2.png';
 
 // ✅ logo transparente (o que pediste)
-const BRAND_LOGO_URL = '/icon.png';
+const BRAND_LOGO_URL = '/brand.png';
 
 
 // ✅ capa do hero (imagem de fundo do header)
@@ -1025,7 +1025,7 @@ useEffect(() => {
 
  /* -------------------- SHARED UI -------------------- */
 
-const BrandMark = ({
+ const BrandMark = ({
   sizePx = 64,
   widthPx,
   heightPx,
@@ -1037,21 +1037,26 @@ const BrandMark = ({
   const w = typeof widthPx === 'number' ? widthPx : sizePx;
   const h = typeof heightPx === 'number' ? heightPx : sizePx;
 
+  const [src, setSrc] = useState(BRAND_LOGO_URL);
+
   return (
     <img
-      src={BRAND_LOGO_URL}
+      src={src}
       alt="Overload logo"
       width={w}
       height={h}
       draggable={false}
       onError={(e) => {
-        // fallback opcional (caso icon.png falhe por algum motivo)
-        (e.currentTarget as HTMLImageElement).src = 'https://i.imgur.com/jROIhp2.png';
+        const img = e.currentTarget as HTMLImageElement;
+        if (img.dataset.fallbackApplied === '1') return;
+        img.dataset.fallbackApplied = '1';
+        setSrc('https://i.imgur.com/jROIhp2.png');
       }}
       style={{ objectFit: 'contain', display: 'block' }}
     />
   );
 };
+
 
 
   /* -------------------- RENDER -------------------- */
@@ -1180,17 +1185,6 @@ const BrandMark = ({
                     </div>
                   </div>
 
-                  <div className="card-premium rounded-[1.75rem] p-4 min-w-[132px] text-right">
-                    <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
-                      Este mês
-                    </div>
-                    <div className="mt-2 text-3xl font-black italic text-white">
-                      {homeRecap.thisMonthSessions}
-                    </div>
-                    <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-300">
-                      sessões
-                    </div>
-                  </div>
                 </div>
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
