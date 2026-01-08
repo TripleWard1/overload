@@ -56,8 +56,17 @@ type WorkoutTemplate = {
   exercises: TemplateExercise[];
 };
 
+type WeightEntry = {
+  id: string;
+  dateIso: string;   // ISO string
+  weightKg: number;
+  note?: string;
+};
+
+
 /* -------------------- STORAGE -------------------- */
 const STORAGE_KEY = 'gym_sessions_v2';
+const STORAGE_KEY_WEIGHT = 'gym_bodyweight_v1';
 const STORAGE_KEY_STATS = 'gym_exercise_stats_v1';
 const STORAGE_KEY_TEMPLATES = 'gym_templates_v1';
 
@@ -296,8 +305,9 @@ const getExerciseImage = (name: string) => {
 /* -------------------- APP -------------------- */
 export default function GymApp() {
   const [activeTab, setActiveTab] = useState<
-    'home' | 'train' | 'history' | 'calendar' | 'templates'
-  >('home');
+  'home' | 'train' | 'history' | 'calendar' | 'templates' | 'peso'
+>('home');
+
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
@@ -326,10 +336,16 @@ export default function GymApp() {
   const [templatesExpanded, setTemplatesExpanded] = useState(false);
   // --- ADICIONA ISTO JUNTO AOS OUTROS USESTATES ---
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+const [toastText, setToastText] = useState('Treino guardado');
+
   // COLAR ISTO LOGO ABAIXO DOS TEUS USESTATES
   const startWorkoutFromTemplate = (template: WorkoutTemplate) => {
     startFromTemplate(template);
   };
+  // --- PESO (Progresso) ---
+const [weights, setWeights] = useState<WeightEntry[]>([]);
+const [weightInputKg, setWeightInputKg] = useState('');
+const [weightNote, setWeightNote] = useState('');
 
   // calendar
   const today = new Date();
@@ -360,6 +376,9 @@ useEffect(() => {
     const savedStats = localStorage.getItem(STORAGE_KEY_STATS);
     if (savedStats) setExerciseStats(JSON.parse(savedStats));
 
+    const savedWeights = localStorage.getItem(STORAGE_KEY_WEIGHT);
+    if (savedWeights) setWeights(JSON.parse(savedWeights));
+
     const savedTemplates = localStorage.getItem(STORAGE_KEY_TEMPLATES);
     if (savedTemplates) setTemplates(JSON.parse(savedTemplates));
   } catch (e) {
@@ -383,6 +402,11 @@ useEffect(() => {
   if (!hydrated) return;
   localStorage.setItem(STORAGE_KEY_TEMPLATES, JSON.stringify(templates));
 }, [hydrated, templates]);
+
+useEffect(() => {
+  if (!hydrated) return;
+  localStorage.setItem(STORAGE_KEY_WEIGHT, JSON.stringify(weights));
+}, [hydrated, weights]);
 
 
   useEffect(() => {
@@ -427,6 +451,97 @@ useEffect(() => {
     );
     return list[0];
   }, [exerciseStats]);
+
+  const weightsSorted = useMemo(() => {
+    const copy = [...weights];
+    copy.sort((a, b) => new Date(a.dateIso).getTime() - new Date(b.dateIso).getTime());
+    return copy;
+  }, [weights]);
+  
+  const weightStats = useMemo(() => {
+    if (!weightsSorted.length) return null;
+  
+    const last = weightsSorted[weightsSorted.length - 1];
+    const prev = weightsSorted.length >= 2 ? weightsSorted[weightsSorted.length - 2] : null;
+  
+    const values = weightsSorted.map((w) => w.weightKg);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+  
+    const delta = prev ? Number((last.weightKg - prev.weightKg).toFixed(1)) : null;
+  
+    // últimos 7 registos (simples e robusto)
+    const last7 = weightsSorted.slice(-7);
+    const avg7 =
+      last7.reduce((acc, w) => acc + w.weightKg, 0) / Math.max(1, last7.length);
+  
+    return {
+      last,
+      prev,
+      delta,
+      min: Number(min.toFixed(1)),
+      max: Number(max.toFixed(1)),
+      avg7: Number(avg7.toFixed(1)),
+      count: weightsSorted.length,
+    };
+  }, [weightsSorted]);
+  
+  const weightChart = useMemo(() => {
+    // desenha os últimos 14 pontos (bom no mobile)
+    const pts = weightsSorted.slice(-14);
+    if (pts.length < 2) return null;
+  
+    const w = 320; // viewBox width
+    const h = 120; // viewBox height
+    const padX = 10;
+    const padY = 12;
+  
+    const ys = pts.map((p) => p.weightKg);
+    const min = Math.min(...ys);
+    const max = Math.max(...ys);
+    const span = Math.max(0.001, max - min);
+  
+    const xStep = (w - padX * 2) / (pts.length - 1);
+  
+    const points = pts
+      .map((p, i) => {
+        const x = padX + i * xStep;
+        const yNorm = (p.weightKg - min) / span;
+        const y = (h - padY) - yNorm * (h - padY * 2);
+        return { x, y, raw: p };
+      });
+  
+    const poly = points.map((p) => `${p.x},${p.y}`).join(' ');
+    return { w, h, points, poly, min: Number(min.toFixed(1)), max: Number(max.toFixed(1)) };
+  }, [weightsSorted]);
+  
+  const addWeightToday = () => {
+    const n = Number(String(weightInputKg).replace(',', '.'));
+    if (!Number.isFinite(n) || n <= 0) return;
+  
+    const entry: WeightEntry = {
+      id: crypto.randomUUID(),
+      dateIso: new Date().toISOString(),
+      weightKg: Number(n.toFixed(1)),
+      note: (weightNote || '').trim() || undefined,
+    };
+  
+    setWeights((prev) => [...prev, entry]);
+    setWeightInputKg('');
+    setWeightNote('');
+  
+    // reuse toast já existente
+    setToastText('Peso registado');
+setShowSuccessToast(true);
+setTimeout(() => setShowSuccessToast(false), 1600);
+
+
+  };
+  
+  const removeWeight = (id: string) => {
+    setWeights((prev) => prev.filter((w) => w.id !== id));
+  };
+  
 
   const weekRecap = useMemo(() => {
     const now = new Date();
@@ -802,8 +917,10 @@ useEffect(() => {
       return [next, ...prev];
     });
 
-    setShowSuccessToast(true);
-    setTimeout(() => setShowSuccessToast(false), 1600);
+    setToastText('Treino guardado');
+setShowSuccessToast(true);
+setTimeout(() => setShowSuccessToast(false), 1600);
+
 
     setCurrentSession(null);
     setActiveTab('calendar');
@@ -2079,6 +2196,166 @@ useEffect(() => {
         </div>
       )}
 
+{/* PESO (Progresso) */}
+{activeTab === 'peso' && (
+  <div className="p-6 animate-in">
+    <div className="flex items-center gap-4 mb-8 pt-2">
+      <BrandMark sizePx={HEADER_LOGO_PX} />
+      <div>
+        <div className="text-[10px] font-black uppercase tracking-[0.38em] text-slate-300">
+          {BRAND_NAME}
+        </div>
+        <h2
+          className="text-[28px] font-black italic uppercase tracking-[-0.04em] leading-none mt-1 text-white"
+          style={{ fontFamily: 'var(--font-grotesk), var(--font-inter), system-ui' }}
+        >
+          Peso
+        </h2>
+        <div className="text-[10px] font-black uppercase tracking-[0.26em] text-slate-300 mt-2">
+          Progresso
+        </div>
+      </div>
+    </div>
+
+    {/* input */}
+    <div className="card-premium rounded-[2.5rem] p-6">
+      <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
+        Registar hoje
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <input
+          value={weightInputKg}
+          onChange={(e) => setWeightInputKg(e.target.value)}
+          inputMode="decimal"
+          placeholder="kg"
+          className="col-span-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm font-black outline-none focus:ring-4 ring-emerald-300/20 text-white placeholder:text-slate-500"
+        />
+        <input
+          value={weightNote}
+          onChange={(e) => setWeightNote(e.target.value)}
+          placeholder="nota (opcional)"
+          className="col-span-2 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-4 ring-emerald-300/20 text-white placeholder:text-slate-500"
+        />
+      </div>
+
+      <button
+        onClick={addWeightToday}
+        className="mt-3 w-full btn-primary px-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95"
+      >
+        Guardar peso
+      </button>
+    </div>
+
+    {/* números + gráfico */}
+    <div className="mt-5 grid grid-cols-2 gap-4">
+      <div className="card-premium rounded-[2.25rem] p-5">
+        <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
+          Atual
+        </div>
+        <div className="mt-2 text-3xl font-black italic text-white">
+          {weightStats?.last ? `${weightStats.last.weightKg}kg` : '--'}
+        </div>
+        <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-300">
+          {weightStats?.delta === null
+            ? 'sem comparação'
+            : weightStats?.delta !== undefined
+              ? `${weightStats.delta > 0 ? '+' : ''}${weightStats.delta}kg vs anterior`
+              : '—'}
+        </div>
+      </div>
+
+      <div className="card-premium rounded-[2.25rem] p-5">
+        <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
+          7 registos
+        </div>
+        <div className="mt-2 text-3xl font-black italic text-white">
+          {weightStats ? `${weightStats.avg7}kg` : '--'}
+        </div>
+        <div className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-300">
+          média
+        </div>
+      </div>
+    </div>
+
+    <div className="mt-4 card-premium rounded-[2.5rem] p-6 overflow-hidden">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
+            Gráfico
+          </div>
+          <div className="text-[10px] font-black uppercase tracking-widest text-slate-300 mt-2">
+            {weightChart ? `${weightChart.min}kg – ${weightChart.max}kg` : 'precisas de 2 registos'}
+          </div>
+        </div>
+
+        <div className="text-[10px] font-black uppercase tracking-widest text-slate-300">
+          {weightStats ? `${weightStats.count} entradas` : '0 entradas'}
+        </div>
+      </div>
+
+      <div className="mt-4">
+        {weightChart ? (
+          <svg
+            viewBox={`0 0 ${weightChart.w} ${weightChart.h}`}
+            className="w-full"
+            style={{ height: 140 }}
+          >
+            <polyline
+              points={weightChart.poly}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              opacity="0.9"
+            />
+            {weightChart.points.map((p) => (
+              <circle key={p.raw.id} cx={p.x} cy={p.y} r="4" fill="currentColor" />
+            ))}
+          </svg>
+        ) : (
+          <div className="text-slate-300 text-xs font-bold">
+            Adiciona pelo menos 2 pesos para veres o progresso.
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* lista */}
+    <div className="mt-5 space-y-3 pb-36">
+      {weightsSorted.slice().reverse().slice(0, 12).map((w) => (
+        <div key={w.id} className="bg-white/5 border border-white/10 rounded-[2rem] p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-white font-black italic text-lg">
+                {w.weightKg}kg
+              </div>
+              <div className="text-[10px] text-slate-300 font-mono uppercase mt-1">
+                {formatDatePT(w.dateIso)}
+                {w.note ? <span className="ml-2 text-slate-300">• {w.note}</span> : null}
+              </div>
+            </div>
+            <button
+              onClick={() => removeWeight(w.id)}
+              className="bg-rose-500/10 border border-rose-400/20 px-3 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest text-rose-200 active:scale-95"
+            >
+              Remover
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {weightsSorted.length === 0 && (
+        <div className="card-premium rounded-[2.25rem] p-6 text-center">
+          <div className="text-slate-300 text-xs font-bold">
+            Ainda sem registos de peso.
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
+
       {/* CALENDAR (mais premium) */}
       {activeTab === 'calendar' && (
         <div className="p-6 animate-in">
@@ -2513,6 +2790,7 @@ useEffect(() => {
         { id: 'home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
         { id: 'templates', icon: 'M9 12h6m-6 4h6m-7 4h8a2 2 0 002-2V6a2 2 0 00-2-2H8a2 2 0 00-2 2v12a2 2 0 002 2z' },
         { id: 'train', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+        { id: 'peso', icon: 'M12 3v18m9-9H3' },
         { id: 'calendar', icon: 'M8 7V5m8 2V5M4 9h16m-2 12H6a2 2 0 01-2-2V9a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2z' },
         { id: 'history', icon: 'M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
       ].map((tab) => (
@@ -2816,8 +3094,9 @@ useEffect(() => {
               </svg>
             </div>
             <span className="font-black uppercase italic tracking-tighter text-sm">
-              Treino Guardado!
-            </span>
+  {toastText}
+</span>
+
           </div>
         </div>
       )}
