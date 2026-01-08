@@ -1023,47 +1023,35 @@ useEffect(() => {
   };
   
 
-  /* -------------------- SHARED UI -------------------- */
-  const BrandMark = ({
-    sizePx,
-    widthPx,
-    heightPx,
-  }: {
-    sizePx?: number;
-    widthPx?: number;
-    heightPx?: number;
-  }) => {
-    const w =
-      typeof widthPx === 'number'
-        ? widthPx
-        : typeof sizePx === 'number'
-        ? sizePx
-        : 64;
-  
-    const h =
-      typeof heightPx === 'number'
-        ? heightPx
-        : typeof sizePx === 'number'
-        ? sizePx
-        : 64;
-  
-    return (
-      <img
-        src={BRAND_LOGO_URL}
-        alt="Overload logo"
-        style={{ width: w, height: h, display: 'block' }}
-        className="object-contain drop-shadow-[0_10px_24px_rgba(0,0,0,0.55)]"
-        referrerPolicy="no-referrer"
-        crossOrigin="anonymous"
-        loading="eager"
-        draggable={false}
-        onError={() => {
-          console.log('❌ LOGO NÃO CARREGOU:', BRAND_LOGO_URL);
-        }}
-      />
-    );
-  };
-  
+ /* -------------------- SHARED UI -------------------- */
+
+const BrandMark = ({
+  sizePx = 64,
+  widthPx,
+  heightPx,
+}: {
+  sizePx?: number;
+  widthPx?: number;
+  heightPx?: number;
+}) => {
+  const w = typeof widthPx === 'number' ? widthPx : sizePx;
+  const h = typeof heightPx === 'number' ? heightPx : sizePx;
+
+  return (
+    <img
+      src={BRAND_LOGO_URL}
+      alt="Overload logo"
+      width={w}
+      height={h}
+      draggable={false}
+      onError={(e) => {
+        // fallback opcional (caso icon.png falhe por algum motivo)
+        (e.currentTarget as HTMLImageElement).src = 'https://i.imgur.com/jROIhp2.png';
+      }}
+      style={{ objectFit: 'contain', display: 'block' }}
+    />
+  );
+};
 
 
   /* -------------------- RENDER -------------------- */
@@ -2709,71 +2697,40 @@ useEffect(() => {
         }
         
         /* Wordmark */
-        .brand-wordmark {
-          font-family: var(--font-grotesk), var(--font-inter), system-ui;
-          font-weight: 900;
-          font-size: 34px;
-          line-height: 1;
-          letter-spacing: -0.04em;
-          color: rgba(255, 255, 255, 0.98);
-          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55),
-            0 10px 28px rgba(0, 0, 0, 0.35);
-          -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.25);
-        }
-        
-        .brand-wordmark-over {
-          color: rgba(255, 255, 255, 0.98);
-        }
-        
-        .brand-wordmark-load {
-          background: linear-gradient(
-            135deg,
-            rgba(34, 197, 94, 0.95),
-            rgba(163, 230, 53, 0.95)
-          );
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-          filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.45));
-        }
-        
-        .brand-wordmark-sub {
-          margin-top: 10px;
-          font-size: 11px;
-          font-weight: 900;
-          text-transform: uppercase;
-          letter-spacing: 0.28em;
-          color: rgba(203, 213, 225, 0.92);
-          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
-        }
-        
-          .brand-wordmark-over {
-            color: rgba(255, 255, 255, 0.98);
-          }
-          
-          .brand-wordmark-load {
-            /* toque premium mas sem “painel” atrás */
-            background: linear-gradient(135deg, rgba(34,197,94,0.95), rgba(163,230,53,0.95));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-          
-            /* mantém legível mesmo com gradient text */
-            filter: drop-shadow(0 2px 10px rgba(0,0,0,0.45));
-          }
-          
-          .brand-wordmark-sub {
-            margin-top: 10px;
-            font-size: 11px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.28em;
-            color: rgba(203, 213, 225, 0.92);
-            text-shadow: 0 2px 10px rgba(0,0,0,0.45);
-          }
-          
+.brand-wordmark {
+  font-family: var(--font-grotesk), var(--font-inter), system-ui;
+  font-weight: 900;
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: rgba(255, 255, 255, 0.98);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55),
+    0 10px 28px rgba(0, 0, 0, 0.35);
+  -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.25);
+}
 
-        }
+.brand-wordmark-over {
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.brand-wordmark-load {
+  background: linear-gradient(135deg, rgba(34,197,94,0.95), rgba(163,230,53,0.95));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 10px rgba(0,0,0,0.45));
+}
+
+.brand-wordmark-sub {
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: rgba(203, 213, 225, 0.92);
+  text-shadow: 0 2px 10px rgba(0,0,0,0.45);
+}
+
       `}</style>
       {/* --- COLA ISTO ANTES DO </main> --- */}
       {showSuccessToast && (
