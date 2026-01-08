@@ -2550,193 +2550,201 @@ useEffect(() => {
   </div>
 </nav>
 
+<style jsx global>{`
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;          /* fallback */
+    overscroll-behavior-x: none; /* evita puxar para os lados */
+    background: #070b14;
+    color: #e5e7eb;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
 
-      <style jsx global>{`
-        html,
-        body {
-          width: 100%;
-          max-width: 100%;
-          overflow-x: hidden;          /* fallback */
-          overscroll-behavior-x: none; /* evita puxar para os lados */
-          background: #070b14;
-          color: #e5e7eb;
-          -webkit-tap-highlight-color: transparent;
-          -webkit-text-size-adjust: 100%;
-        }
-        
-        .app-shell {
-          width: 100%;
-          max-width: 100%;
-          overflow-x: clip;            /* ✅ bloqueia scroll lateral MESMO em mobile */
-          overscroll-behavior-x: none;
-          touch-action: pan-y;         /* ✅ só permite scroll vertical */
-        }
-        
-        .animate-in {
-          animation: fadeIn 0.35s ease-out;
-          animation-fill-mode: both;
-        }
-        
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            filter: blur(2px);
-          }
-          to {
-            opacity: 1;
-            filter: none;
-          }
-        }
-        
+  .app-shell {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;            /* ✅ bloqueia scroll lateral MESMO em mobile */
+    overscroll-behavior-x: none;
+    touch-action: pan-y;         /* ✅ só permite scroll vertical */
+  }
 
-        input::placeholder {
-          color: #64748b;
-          font-style: italic;
-          text-transform: uppercase;
-          font-size: 0.75rem;
-          font-weight: 900;
-          letter-spacing: 0.12em;
-        }
+  .animate-in {
+    animation: fadeIn 0.35s ease-out;
+    animation-fill-mode: both;
+  }
 
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      filter: blur(2px);
+    }
+    to {
+      opacity: 1;
+      filter: none;
+    }
+  }
 
-        /* Premium glass (dark) */
-        .card-premium {
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.10);
-          box-shadow: 0 26px 110px rgba(0, 0, 0, 0.45);
-          backdrop-filter: blur(18px);
-        }
-        .card-soft {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          backdrop-filter: blur(14px);
-        }
+  input::placeholder {
+    color: #64748b;
+    font-style: italic;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+  }
 
-        /* Buttons */
-        .btn-primary {
-          background: linear-gradient(135deg, #22c55e, #a3e635);
-          color: #071018;
-          border: 1px solid rgba(163, 230, 53, 0.35);
-          box-shadow: 0 18px 60px rgba(34, 197, 94, 0.16);
-        }
-        .btn-soft {
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.10);
-          color: #ffffff;
-          box-shadow: 0 8px 26px rgba(0, 0, 0, 0.30);
-          backdrop-filter: blur(14px);
-        }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 
-        /* Chips */
-        .chip {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.55rem 0.7rem;
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.10);
-          backdrop-filter: blur(14px);
-        }
-        .chip-dot {
-          width: 0.45rem;
-          height: 0.45rem;
-          border-radius: 999px;
-          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.05);
-        }
-        .chip-k {
-          font-size: 9px;
-          font-weight: 900;
-          text-transform: uppercase;
-          letter-spacing: 0.26em;
-          color: #cbd5e1;
-        }
-        .chip-v {
-          font-size: 0.95rem;
-          font-weight: 900;
-          color: #ffffff;
-          font-style: italic;
-          margin-left: 0.15rem;
-        }
+  /* Premium glass (dark) */
+  .card-premium {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow: 0 26px 110px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(18px);
+  }
+  .card-soft {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(14px);
+  }
 
-        /* Brand mark */
-        .brandmark {
-          display: grid;
-          place-items: center;
-          border-radius: 18px;
-          background: rgba(255, 255, 255, 0.10);
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          backdrop-filter: blur(16px);
-          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
-        }
-        .logo-img {
-          object-fit: contain;
-          opacity: 0.98;
-          filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35));
-        }
+  /* Buttons */
+  .btn-primary {
+    background: linear-gradient(135deg, #22c55e, #a3e635);
+    color: #071018;
+    border: 1px solid rgba(163, 230, 53, 0.35);
+    box-shadow: 0 18px 60px rgba(34, 197, 94, 0.16);
+  }
+  .btn-soft {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    color: #ffffff;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.30);
+    backdrop-filter: blur(14px);
+  }
 
-        /* noise via inline svg */
-        .app-noise {
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
-        }
+  /* Chips */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(14px);
+  }
+  .chip-dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.05);
+  }
+  .chip-k {
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.26em;
+    color: #cbd5e1;
+  }
+  .chip-v {
+    font-size: 0.95rem;
+    font-weight: 900;
+    color: #ffffff;
+    font-style: italic;
+    margin-left: 0.15rem;
+  }
 
-        .app-shell ::selection {
-          background: rgba(34, 197, 94, 0.22);
-        }
-        
-        /* Wordmark */
-.brand-wordmark {
-  font-family: var(--font-grotesk), var(--font-inter), system-ui;
-  font-weight: 900;
-  font-size: 34px;
-  line-height: 1;
-  letter-spacing: -0.04em;
-  color: rgba(255, 255, 255, 0.98);
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55),
-    0 10px 28px rgba(0, 0, 0, 0.35);
-  -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.25);
-}
+  /* Brand mark */
+  .brandmark {
+    display: grid;
+    place-items: center;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+  }
+  .logo-img {
+    object-fit: contain;
+    opacity: 0.98;
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.35));
+  }
 
-.brand-wordmark-over {
-  color: rgba(255, 255, 255, 0.98);
-}
+  /* noise via inline svg */
+  .app-noise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
+  }
 
-.brand-wordmark-load {
-  background: linear-gradient(135deg, rgba(34,197,94,0.95), rgba(163,230,53,0.95));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 2px 10px rgba(0,0,0,0.45));
-}
+  .app-shell ::selection {
+    background: rgba(34, 197, 94, 0.22);
+  }
 
-.brand-wordmark-sub {
-  margin-top: 10px;
-  font-size: 11px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.28em;
-  color: rgba(203, 213, 225, 0.92);
-  text-shadow: 0 2px 10px rgba(0,0,0,0.45);
-}
+  /* Wordmark */
+  .brand-wordmark {
+    font-family: var(--font-grotesk), var(--font-inter), system-ui;
+    font-weight: 900;
+    font-size: 34px;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: rgba(255, 255, 255, 0.98);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55),
+      0 10px 28px rgba(0, 0, 0, 0.35);
+    -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.25);
+  }
 
-/* --- iOS / mobile: evitar auto-zoom ao focar inputs --- */
-@media (max-width: 768px) {
+  .brand-wordmark-over {
+    color: rgba(255, 255, 255, 0.98);
+  }
+
+  .brand-wordmark-load {
+    background: linear-gradient(
+      135deg,
+      rgba(34, 197, 94, 0.95),
+      rgba(163, 230, 53, 0.95)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.45));
+  }
+
+  .brand-wordmark-sub {
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    color: rgba(203, 213, 225, 0.92);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  }
+
+  /* --- iOS / mobile: impedir auto-zoom ao focar inputs (robusto) --- */
   input,
   textarea,
   select {
     font-size: 16px !important;
   }
-}
 
+  /* Desktop: podes voltar ao tamanho que quiseres */
+  @media (min-width: 769px) {
+    input,
+    textarea,
+    select {
+      font-size: 14px !important; /* ajusta se quiseres */
+    }
+  }
+`}</style>
 
-      `}</style>
       {/* --- COLA ISTO ANTES DO </main> --- */}
       {showSuccessToast && (
         <div className="fixed top-12 left-0 right-0 z-[300] flex justify-center px-6 animate-in">
