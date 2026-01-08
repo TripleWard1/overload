@@ -1,6 +1,5 @@
 'use client';
 
-import Head from 'next/head';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import React from 'react';
@@ -1065,15 +1064,6 @@ const BrandMark = ({
   }}
 >
 
-      <Head>
-        <title>{BRAND_NAME}</title>
-        <meta name="application-name" content={BRAND_NAME} />
-        <meta name="apple-mobile-web-app-title" content={BRAND_NAME} />
-        <meta name="theme-color" content="#070B14" />
-        <link rel="icon" href={BRAND_FAVICON_URL} />
-        <link rel="apple-touch-icon" href={BRAND_FAVICON_URL} />
-        <link rel="shortcut icon" href={BRAND_FAVICON_URL} />
-      </Head>
 
       {/* BACKGROUND */}
       <div className="pointer-events-none fixed inset-0 -z-10">
@@ -2709,7 +2699,8 @@ const BrandMark = ({
           line-height: 1;
           letter-spacing: -0.04em;
           color: rgba(255, 255, 255, 0.98);
-          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55), 0 10px 28px rgba(0, 0, 0, 0.35);
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55),
+            0 10px 28px rgba(0, 0, 0, 0.35);
           -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.25);
         }
         
@@ -2718,11 +2709,15 @@ const BrandMark = ({
         }
         
         .brand-wordmark-load {
-          background: linear-gradient(135deg, rgba(34,197,94,0.95), rgba(163,230,53,0.95));
+          background: linear-gradient(
+            135deg,
+            rgba(34, 197, 94, 0.95),
+            rgba(163, 230, 53, 0.95)
+          );
           -webkit-background-clip: text;
           background-clip: text;
           color: transparent;
-          filter: drop-shadow(0 2px 10px rgba(0,0,0,0.45));
+          filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.45));
         }
         
         .brand-wordmark-sub {
@@ -2732,23 +2727,9 @@ const BrandMark = ({
           text-transform: uppercase;
           letter-spacing: 0.28em;
           color: rgba(203, 213, 225, 0.92);
-          text-shadow: 0 2px 10px rgba(0,0,0,0.45));
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
         }
         
-            font-family: var(--font-grotesk), var(--font-inter), system-ui;
-            font-weight: 900;
-            font-size: 34px;
-            line-height: 1;
-            letter-spacing: -0.04em;
-            color: rgba(255, 255, 255, 0.98);
-          
-            /* legibilidade em cima de foto, sem fundo */
-            text-shadow:
-              0 2px 10px rgba(0, 0, 0, 0.55),
-              0 10px 28px rgba(0, 0, 0, 0.35);
-            -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.25);
-          }
-          
           .brand-wordmark-over {
             color: rgba(255, 255, 255, 0.98);
           }
