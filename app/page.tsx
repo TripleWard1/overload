@@ -1235,7 +1235,7 @@ const BrandMark = ({
       <div className="mt-2 text-white font-black italic text-[18px] leading-none">
         {bestLift?.weight ? `${bestLift.weight}kg` : '--'}
         {typeof bestLift?.reps === 'number' && bestLift.reps > 0 ? (
-          <span className="ml-2 text-slate-ch text-slate-300 font-black not-italic text-[12px]">
+          <span className="ml-2 text-slate-300 font-black not-italic text-[12px]">
             × {bestLift.reps}
           </span>
         ) : null}
@@ -1270,7 +1270,7 @@ const BrandMark = ({
 
             <div className="card-premium rounded-[2.75rem] p-6 overflow-hidden relative">
               <div className="absolute -top-24 -right-24 h-56 w-56 rounded-full bg-indigo-500/10 blur-2xl" />
-              <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-emerald-500/8 blur-2xl" />
+              <div className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-emerald-500/10 blur-2xl" />
               <div className="absolute inset-0 opacity-[0.10] mix-blend-soft-light app-noise" />
 
               <div className="relative flex items-center justify-between gap-4">
@@ -2505,7 +2505,7 @@ const BrandMark = ({
   style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px))' }}
 >
   <div
-    className="relative max-w-md mx-auto mb-4 rounded-[2.9rem] border border-white/12 shadow-[0_24px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
+    className="relative max-w-md mx-auto mb-4 rounded-[2.9rem] border border-white/10 shadow-[0_24px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
     style={{
       background: 'rgba(7,11,20,0.88)', // ✅ fundo escuro consistente
       paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',
@@ -2538,7 +2538,7 @@ const BrandMark = ({
             className={`mb-1 h-10 w-10 rounded-2xl flex items-center justify-center transition-all border ${
               activeTab === tab.id
                 ? 'bg-[linear-gradient(135deg,#22c55e,#a3e635)] border-emerald-200/40 shadow-[0_16px_50px_rgba(34,197,94,0.18)]'
-                : 'bg-white/6 border-white/10'
+                : 'bg-white/5 border-white/10'
             }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
