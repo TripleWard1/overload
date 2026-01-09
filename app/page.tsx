@@ -374,7 +374,7 @@ const [weightNote, setWeightNote] = useState('');
     const unsub = onAuthStateChanged(auth, (u) => {
       setUid(u?.uid ?? null);
       setAuthReady(true);
-      if (!u) router.replace("/login");
+      if (!u) router.replace("/landing");
     });
     return () => unsub();
   }, [router]);
