@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import React from 'react';
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { loadUserCollection, upsertUserDoc, deleteUserDoc } from "@/lib/db";
+import { useRouter } from "next/navigation";
+
 
 /* -------------------- FONTS (premium) -------------------- */
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -62,13 +67,6 @@ type WeightEntry = {
   weightKg: number;
   note?: string;
 };
-
-
-/* -------------------- STORAGE -------------------- */
-const STORAGE_KEY = 'gym_sessions_v2';
-const STORAGE_KEY_WEIGHT = 'gym_bodyweight_v1';
-const STORAGE_KEY_STATS = 'gym_exercise_stats_v1';
-const STORAGE_KEY_TEMPLATES = 'gym_templates_v1';
 
 /* -------------------- BRAND -------------------- */
 const BRAND_NAME = 'Overload';
@@ -316,7 +314,10 @@ export default function GymApp() {
     Record<string, ExerciseStats>
   >({});
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
-
+  const router = useRouter();
+  const [authReady, setAuthReady] = useState(false);
+  const [uid, setUid] = useState<string | null>(null);
+  
   const [exerciseInput, setExerciseInput] = useState('');
   const [restTimer, setRestTimer] = useState<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -366,50 +367,57 @@ const [weightNote, setWeightNote] = useState('');
   const [addonNotes, setAddonNotes] = useState('');
 
   /* -------------------- LOAD / SYNC -------------------- */
-const [hydrated, setHydrated] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
-useEffect(() => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) setSessions(JSON.parse(saved));
-
-    const savedStats = localStorage.getItem(STORAGE_KEY_STATS);
-    if (savedStats) setExerciseStats(JSON.parse(savedStats));
-
-    const savedWeights = localStorage.getItem(STORAGE_KEY_WEIGHT);
-    if (savedWeights) setWeights(JSON.parse(savedWeights));
-
-    const savedTemplates = localStorage.getItem(STORAGE_KEY_TEMPLATES);
-    if (savedTemplates) setTemplates(JSON.parse(savedTemplates));
-  } catch (e) {
-    console.error('Erro a ler localStorage', e);
-  } finally {
-    setHydrated(true);
-  }
-}, []);
-
-useEffect(() => {
-  if (!hydrated) return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-}, [hydrated, sessions]);
-
-useEffect(() => {
-  if (!hydrated) return;
-  localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(exerciseStats));
-}, [hydrated, exerciseStats]);
-
-useEffect(() => {
-  if (!hydrated) return;
-  localStorage.setItem(STORAGE_KEY_TEMPLATES, JSON.stringify(templates));
-}, [hydrated, templates]);
-
-useEffect(() => {
-  if (!hydrated) return;
-  localStorage.setItem(STORAGE_KEY_WEIGHT, JSON.stringify(weights));
-}, [hydrated, weights]);
-
+  
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUid(u?.uid ?? null);
+      setAuthReady(true);
+      if (!u) router.replace("/login");
+    });
+    return () => unsub();
+  }, [router]);
 
   useEffect(() => {
+    if (!uid) return;
+  
+    (async () => {
+      try {
+        // carrega tudo do Firestore do utilizador
+        const [sess, stats, wts, tpls] = await Promise.all([
+          loadUserCollection<Session>(uid, "sessions"),
+          loadUserCollection<{ id: string } & any>(uid, "exerciseStats"),
+          loadUserCollection<WeightEntry>(uid, "weights"),
+          loadUserCollection<WorkoutTemplate>(uid, "templates"),
+        ]);
+  
+        // 🔥 tu controlas a ordenação aqui:
+        // sessions newest-first:
+        sess.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+        // templates newest-first:
+        tpls.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        // weights oldest-first (como tinhas no memo)
+        wts.sort((a, b) => new Date(a.dateIso).getTime() - new Date(b.dateIso).getTime());
+  
+        setSessions(sess);
+        setExerciseStats(
+          // caso o teu exerciseStats seja Record<string, ExerciseStats>,
+          // guarda cada stat como doc com id = normalizedName (ver nota abaixo)
+          Object.fromEntries((stats || []).map((s: any) => [s.normalizedName, s]))
+        );
+        setWeights(wts);
+        setTemplates(tpls);
+      } catch (e) {
+        console.error("Erro a carregar Firestore", e);
+      } finally {
+        setHydrated(true);
+      }
+    })();
+  }, [uid]);
+  
+
+ useEffect(() => {
     if (restTimer === 0 || restTimer === null) {
       if (timerRef.current) clearInterval(timerRef.current);
       timerRef.current = null;
@@ -515,7 +523,7 @@ useEffect(() => {
     return { w, h, points, poly, min: Number(min.toFixed(1)), max: Number(max.toFixed(1)) };
   }, [weightsSorted]);
   
-  const addWeightToday = () => {
+  const addWeightToday = async () => {
     const n = Number(String(weightInputKg).replace(',', '.'));
     if (!Number.isFinite(n) || n <= 0) return;
   
@@ -530,17 +538,21 @@ useEffect(() => {
     setWeightInputKg('');
     setWeightNote('');
   
-    // reuse toast já existente
+    if (uid) {
+      await upsertUserDoc(uid, "weights", entry);
+    }
+  
     setToastText('Peso registado');
-setShowSuccessToast(true);
-setTimeout(() => setShowSuccessToast(false), 1600);
-
-
+    setShowSuccessToast(true);
+    setTimeout(() => setShowSuccessToast(false), 1600);
   };
   
-  const removeWeight = (id: string) => {
+  
+  const removeWeight = async (id: string) => {
     setWeights((prev) => prev.filter((w) => w.id !== id));
+    if (uid) await deleteUserDoc(uid, "weights", id);
   };
+  
   
 
   const weekRecap = useMemo(() => {
@@ -787,15 +799,12 @@ setTimeout(() => setShowSuccessToast(false), 1600);
     setActiveTab('train');
   };
 
-  const saveWorkout = () => {
+  const saveWorkout = async () => {
     if (!currentSession) return;
-
+  
     const endedAt = new Date().toISOString();
-    const durationSeconds = computeDurationSeconds(
-      currentSession.startedAt,
-      endedAt
-    );
-
+    const durationSeconds = computeDurationSeconds(currentSession.startedAt, endedAt);
+  
     const sessionToSave: Session = {
       ...currentSession,
       endedAt,
@@ -806,40 +815,36 @@ setTimeout(() => setShowSuccessToast(false), 1600);
         notes: (addonNotes || '').trim() || undefined,
       },
     };
-
+  
     const updated = [sessionToSave, ...sessions];
     setSessions(updated);
-
+  
+    if (uid) {
+      await upsertUserDoc(uid, "sessions", sessionToSave);
+    }
+  
     // update stats
     const nextStats: Record<string, ExerciseStats> = { ...exerciseStats };
-
+  
     for (const ex of sessionToSave.exercises) {
       const normalized = normalizeName(ex.name);
       const display = ex.name.trim();
-
+  
       const completedSets = ex.sets.filter((s) => s.completed);
       const candidateLast =
-        [...completedSets]
-          .reverse()
-          .find((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0) ??
-        [...ex.sets]
-          .reverse()
-          .find((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
-
+        [...completedSets].reverse().find((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0) ??
+        [...ex.sets].reverse().find((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
+  
       const lastWeight = candidateLast?.weightKg;
       const lastReps = candidateLast?.reps;
-
-      // best: preferir sets concluídos; se não houver, fallback para quaisquer sets preenchidos
+  
       const validSets = ex.sets
         .filter((s) => s.completed)
         .filter((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
-
-      const fallbackSets = ex.sets.filter(
-        (s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0
-      );
-
+  
+      const fallbackSets = ex.sets.filter((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
       const allSets = validSets.length ? validSets : fallbackSets;
-
+  
       const best = allSets.reduce<{ w?: number; r?: number }>(
         (acc, s) => {
           const w = s.weightKg || 0;
@@ -855,76 +860,80 @@ setTimeout(() => setShowSuccessToast(false), 1600);
           r: nextStats[normalized]?.bestReps,
         }
       );
-
+  
       const prev = nextStats[normalized];
       nextStats[normalized] = {
         normalizedName: normalized,
         displayName: prev?.displayName ?? display,
         lastDate: endedAt,
-        lastWeight:
-          typeof lastWeight === 'number' ? lastWeight : prev?.lastWeight,
+        lastWeight: typeof lastWeight === 'number' ? lastWeight : prev?.lastWeight,
         lastReps: typeof lastReps === 'number' ? lastReps : prev?.lastReps,
         bestWeight: typeof best.w === 'number' ? best.w : prev?.bestWeight,
         bestReps: typeof best.r === 'number' ? best.r : prev?.bestReps,
         usageCount: (prev?.usageCount ?? 0) + 1,
       };
-    }
-
-    setExerciseStats(nextStats);
-
-    // auto template upsert
-    const tplNormalized = normalizeName(sessionToSave.name);
-    const tplExercises: TemplateExercise[] = sessionToSave.exercises.map(
-      (ex) => {
-        const n = normalizeName(ex.name);
-        const displayName = ex.name.trim();
-        const targetSets = Math.max(1, ex.sets.length);
-        const repsValues = ex.sets
-          .map((s) => s.reps)
-          .filter((v) => typeof v === 'number');
-
-        const freq = repsValues.reduce<Record<number, number>>((m, v) => {
-          m[v] = (m[v] || 0) + 1;
-          return m;
-        }, {});
-
-        const mode = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0];
-        const targetReps =
-          typeof mode !== 'undefined'
-            ? Number(mode)
-            : repsValues.reverse().find((v) => v > 0) ?? undefined;
-
-        return { normalizedName: n, displayName, targetSets, targetReps };
+  
+      // ✅ GRAVAR STAT POR EXERCÍCIO (doc id = normalized)
+      if (uid) {
+        await upsertUserDoc(uid, "exerciseStats", { id: normalized, ...nextStats[normalized] } as any);
       }
-    );
-
+    }
+  
+    setExerciseStats(nextStats);
+  
+    // ✅ AUTO-TEMPLATE (gravar no firestore também)
+    const tplNormalized = normalizeName(sessionToSave.name);
+    const tplExercises: TemplateExercise[] = sessionToSave.exercises.map((ex) => {
+      const n = normalizeName(ex.name);
+      const displayName = ex.name.trim();
+      const targetSets = Math.max(1, ex.sets.length);
+      const repsValues = ex.sets.map((s) => s.reps).filter((v) => typeof v === 'number');
+  
+      const freq = repsValues.reduce<Record<number, number>>((m, v) => {
+        m[v] = (m[v] || 0) + 1;
+        return m;
+      }, {});
+  
+      const mode = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0];
+      const targetReps =
+        typeof mode !== 'undefined'
+          ? Number(mode)
+          : repsValues.reverse().find((v) => v > 0) ?? undefined;
+  
+      return { normalizedName: n, displayName, targetSets, targetReps };
+    });
+  
+    const nextTemplate: WorkoutTemplate = {
+      id: crypto.randomUUID(),
+      normalizedName: tplNormalized,
+      displayName: sessionToSave.name,
+      updatedAt: endedAt,
+      exercises: tplExercises,
+    };
+  
     setTemplates((prev) => {
-      const existingIdx = prev.findIndex(
-        (t) => t.normalizedName === tplNormalized
-      );
-      const next: WorkoutTemplate = {
-        id: existingIdx >= 0 ? prev[existingIdx].id : crypto.randomUUID(),
-        normalizedName: tplNormalized,
-        displayName: sessionToSave.name,
-        updatedAt: endedAt,
-        exercises: tplExercises,
-      };
+      const existingIdx = prev.findIndex((t) => t.normalizedName === tplNormalized);
       if (existingIdx >= 0) {
         const copy = [...prev];
-        copy[existingIdx] = next;
+        nextTemplate.id = copy[existingIdx].id; // mantém id se já existe
+        copy[existingIdx] = nextTemplate;
         return copy;
       }
-      return [next, ...prev];
+      return [nextTemplate, ...prev];
     });
-
+  
+    if (uid) {
+      await upsertUserDoc(uid, "templates", nextTemplate);
+    }
+  
     setToastText('Treino guardado');
-setShowSuccessToast(true);
-setTimeout(() => setShowSuccessToast(false), 1600);
-
-
+    setShowSuccessToast(true);
+    setTimeout(() => setShowSuccessToast(false), 1600);
+  
     setCurrentSession(null);
     setActiveTab('calendar');
   };
+  
 
   const updateSet = (exIdx: number, sIdx: number, data: Partial<Set>) => {
     if (!currentSession) return;
@@ -998,22 +1007,28 @@ setTimeout(() => setShowSuccessToast(false), 1600);
     setExerciseInput('');
   };
 
-  const removeSession = (id: string) => {
+  const removeSession = async (id: string) => {
     setSessions((prev) => prev.filter((s) => s.id !== id));
     if (selectedSessionId === id) setSelectedSessionId(null);
     if (deleteSessionId === id) setDeleteSessionId(null);
+    if (uid) await deleteUserDoc(uid, "sessions", id);
   };
+  
 
-  const removeTemplate = (id: string) => {
+  const removeTemplate = async (id: string) => {
     setTemplates((prev) => prev.filter((t) => t.id !== id));
+  
     if (selectedTemplateId === id) {
       setSelectedTemplateId(null);
       setTemplateNameInput('');
       setTemplateDraftExercises([]);
       setExerciseInput('');
     }
+  
     setDeleteTemplateId(null);
+    if (uid) await deleteUserDoc(uid, "templates", id);
   };
+  
 
   const startTemplateBuilder = () => {
     setTemplateNameInput('');
@@ -1068,76 +1083,76 @@ setTimeout(() => setShowSuccessToast(false), 1600);
     setTemplateDraftExercises((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const saveTemplate = () => {
-    const name = templateNameInput.trim().replace(/\s+/g, ' ');
-    if (!name) return;
-  
-    const normalizedName = normalizeName(name);
-    const updatedAt = new Date().toISOString();
-  
-    const cleanedExercises = templateDraftExercises
-      .map((e) => ({
-        ...e,
-        displayName: e.displayName.trim().replace(/\s+/g, ' '),
-        normalizedName: normalizeName(e.displayName),
-        targetSets: Math.max(1, Number(e.targetSets || 1)),
-        targetReps:
-          typeof e.targetReps === 'number' ? Number(e.targetReps) : e.targetReps,
-        restSeconds:
-          typeof e.restSeconds === 'number'
-            ? Number(e.restSeconds)
-            : e.restSeconds,
-      }))
-      .filter((e) => e.normalizedName);
-  
-    setTemplates((prev) => {
-      const isNew = selectedTemplateId === 'NEW' || !selectedTemplateId;
-      const existingIdx = !isNew
-        ? prev.findIndex((t) => t.id === selectedTemplateId)
-        : -1;
-  
-      const tpl: WorkoutTemplate = {
-        id: isNew
-          ? crypto.randomUUID()
-          : prev[existingIdx]?.id ?? crypto.randomUUID(),
-        normalizedName,
-        displayName: name,
-        updatedAt,
-        exercises: cleanedExercises,
-      };
-  
-      if (existingIdx >= 0) {
-        const copy = [...prev];
-        copy[existingIdx] = tpl;
-        return copy.sort(
-          (a, b) =>
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        );
-      }
-  
-      const sameNameIdx = prev.findIndex((t) => t.normalizedName === normalizedName);
-      if (sameNameIdx >= 0) {
-        const copy = [...prev];
-        copy[sameNameIdx] = { ...tpl, id: copy[sameNameIdx].id };
-        return copy.sort(
-          (a, b) =>
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        );
-      }
-  
-      return [tpl, ...prev];
-    });
-  
-    // ✅ ISTO É O PONTO 2 (ADICIONAR AQUI)
-    setShowSuccessToast(true);
-    setTimeout(() => setShowSuccessToast(false), 1600);
-  
-    // ✅ voltar para a lista de treinos (fecha editor)
-    setSelectedTemplateId(null);
-    setTemplateNameInput('');
-    setTemplateDraftExercises([]);
-    setExerciseInput('');
+  const saveTemplate = async () => {
+  const name = templateNameInput.trim().replace(/\s+/g, " ");
+  if (!name) return;
+
+  const normalizedName = normalizeName(name);
+  const updatedAt = new Date().toISOString();
+
+  const cleanedExercises = templateDraftExercises
+    .map((e) => ({
+      ...e,
+      displayName: e.displayName.trim().replace(/\s+/g, " "),
+      normalizedName: normalizeName(e.displayName),
+      targetSets: Math.max(1, Number(e.targetSets || 1)),
+      targetReps:
+        typeof e.targetReps === "number" ? Number(e.targetReps) : e.targetReps,
+      restSeconds:
+        typeof e.restSeconds === "number" ? Number(e.restSeconds) : e.restSeconds,
+    }))
+    .filter((e) => e.normalizedName);
+
+  // 🔥 1) decidir o ID antes (para poder gravar no Firestore)
+  const isNew = selectedTemplateId === "NEW" || !selectedTemplateId;
+
+  const existing = !isNew
+    ? templates.find((t) => t.id === selectedTemplateId)
+    : templates.find((t) => t.normalizedName === normalizedName);
+
+  const tpl: WorkoutTemplate = {
+    id: existing?.id ?? crypto.randomUUID(),
+    normalizedName,
+    displayName: name,
+    updatedAt,
+    exercises: cleanedExercises,
   };
+
+  // 🔥 2) atualizar UI
+  setTemplates((prev) => {
+    const idxById = prev.findIndex((t) => t.id === tpl.id);
+    const idxByName = prev.findIndex((t) => t.normalizedName === normalizedName);
+
+    const idx = idxById >= 0 ? idxById : idxByName;
+
+    if (idx >= 0) {
+      const copy = [...prev];
+      copy[idx] = tpl;
+      return copy.sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+    }
+
+    return [tpl, ...prev];
+  });
+
+  // 🔥 3) gravar no Firestore (cada user só nos seus dados)
+  if (uid) {
+    await upsertUserDoc(uid, "templates", tpl);
+  }
+
+  // toast
+  setToastText("Treino guardado");
+  setShowSuccessToast(true);
+  setTimeout(() => setShowSuccessToast(false), 1600);
+
+  // voltar à lista
+  setSelectedTemplateId(null);
+  setTemplateNameInput("");
+  setTemplateDraftExercises([]);
+  setExerciseInput("");
+};
+
   
 
  /* -------------------- SHARED UI -------------------- */

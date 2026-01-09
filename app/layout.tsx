@@ -1,17 +1,27 @@
-import type { Metadata } from 'next';
-import './globals.css';
+import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'Overload',
-  applicationName: 'Overload',
-  themeColor: '#070B14',
+  title: "Overload",
+  applicationName: "Overload",
+  themeColor: "#070B14",
+
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+  },
+
   appleWebApp: {
-    title: 'Overload',
-    statusBarStyle: 'black-translucent',
+    title: "Overload",
+    statusBarStyle: "black-translucent",
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="pt">
       <body>{children}</body>
