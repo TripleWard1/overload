@@ -8,9 +8,11 @@ import {
   onAuthStateChanged,
   signOut,
   GoogleAuthProvider,
+  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
 } from "firebase/auth";
+
 
 
 
@@ -31,16 +33,26 @@ export default function LandingPage() {
   const loginWithGoogle = async () => {
     setErr(null);
     setLoading(true);
+  
     try {
       const provider = new GoogleAuthProvider();
-await signInWithRedirect(auth!, provider);
-
-      // não faz router.replace aqui — o redirect sai da página
+  
+      // tenta popup primeiro (melhor no Vercel/desktop)
+      await signInWithPopup(auth, provider);
+  
+      router.replace("/");
     } catch (e: any) {
-      setErr(e?.message ?? "Erro no login com Google");
-      setLoading(false);
+      // fallback: se o popup for bloqueado/der erro, tenta redirect
+      try {
+        const provider = new GoogleAuthProvider();
+        await signInWithRedirect(auth, provider);
+      } catch (e2: any) {
+        setErr(e2?.message ?? e?.message ?? "Erro no login com Google");
+        setLoading(false);
+      }
     }
   };
+  
   
   useEffect(() => {
     // Apanha o resultado do login via redirect (quando volta do Google)
