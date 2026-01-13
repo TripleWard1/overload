@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Inter, Space_Grotesk } from 'next/font/google';
+import { Inter } from 'next/font/google';
+import '@fontsource/space-grotesk/400.css';
+import '@fontsource/space-grotesk/700.css';
 import React from 'react';
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -11,10 +13,9 @@ import { useRouter } from "next/navigation";
 
 /* -------------------- FONTS (premium) -------------------- */
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const grotesk = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-grotesk',
-});
+
+// mantém a variável para não teres de mexer no resto do CSS
+const grotesk = { variable: '--font-grotesk' } as const;
 
 /* -------------------- TYPES -------------------- */
 type Set = { id: string; weightKg: number; reps: number; completed: boolean };
