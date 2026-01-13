@@ -9,7 +9,9 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithRedirect,
+  getRedirectResult,
 } from "firebase/auth";
+
 
 
 import { auth } from "@/lib/firebase";
