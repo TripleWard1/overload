@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import '@fontsource/space-grotesk/400.css';
 import '@fontsource/space-grotesk/700.css';
 import React from 'react';
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { loadUserCollection, upsertUserDoc, deleteUserDoc } from "@/lib/db";
 import { useRouter } from "next/navigation";
@@ -1285,6 +1285,13 @@ const [weightNote, setWeightNote] = useState('');
                   <div className="flex items-center gap-4">
   <div className="shrink-0">
     <BrandMark sizePx={56} />
+    <button
+  onClick={() => setActiveTab('profile')}
+  className="btn-soft px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 shrink-0"
+>
+  Perfil
+</button>
+
   </div>
 
   <div className="min-w-0">
@@ -2775,6 +2782,68 @@ const [weightNote, setWeightNote] = useState('');
           </div>
         </div>
       ))}
+    </div>
+  </div>
+)}
+
+{activeTab === 'profile' && (
+  <div className="p-6 animate-in pb-36">
+    <div className="flex items-center justify-between gap-4 mb-8 pt-2">
+      <div className="flex items-center gap-4 min-w-0">
+        <BrandMark sizePx={HEADER_LOGO_PX} />
+        <div className="min-w-0">
+          <div className="text-[10px] font-black uppercase tracking-[0.38em] text-slate-300">
+            {BRAND_NAME}
+          </div>
+          <h2
+            className="text-[28px] font-black italic uppercase tracking-[-0.04em] leading-none mt-1 text-white"
+            style={{ fontFamily: 'var(--font-grotesk), var(--font-inter), system-ui' }}
+          >
+            Perfil
+          </h2>
+          <div className="text-[10px] font-black uppercase tracking-[0.26em] text-slate-300 mt-2">
+            Conta
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={() => setActiveTab('home')}
+        className="btn-soft px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 shrink-0"
+      >
+        Home
+      </button>
+    </div>
+
+    <div className="card-premium rounded-[2.5rem] p-6">
+      <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
+        Sessão
+      </div>
+
+      <div className="mt-3 text-white font-black italic text-lg">
+        {auth?.currentUser?.email ?? '—'}
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+          <div className="text-[9px] font-black uppercase tracking-widest text-slate-300">Treinos</div>
+          <div className="mt-2 text-2xl font-black italic text-white">{sessions.length}</div>
+        </div>
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+          <div className="text-[9px] font-black uppercase tracking-widest text-slate-300">Exercícios</div>
+          <div className="mt-2 text-2xl font-black italic text-white">{Object.keys(exerciseStats).length}</div>
+        </div>
+      </div>
+
+      <button
+        onClick={async () => {
+          await signOut(auth!);
+          router.replace('/landing');
+        }}
+        className="mt-5 w-full bg-rose-500 text-white rounded-2xl px-4 py-4 font-black text-[10px] uppercase tracking-widest active:scale-95"
+      >
+        Logout
+      </button>
     </div>
   </div>
 )}
