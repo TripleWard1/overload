@@ -9,8 +9,8 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithRedirect,
-  getRedirectResult,
 } from "firebase/auth";
+
 
 import { auth } from "@/lib/firebase";
 
@@ -31,7 +31,8 @@ export default function LandingPage() {
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithRedirect(auth, provider);
+await signInWithRedirect(auth!, provider);
+
       // não faz router.replace aqui — o redirect sai da página
     } catch (e: any) {
       setErr(e?.message ?? "Erro no login com Google");

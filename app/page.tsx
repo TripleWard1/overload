@@ -372,7 +372,7 @@ const [weightNote, setWeightNote] = useState('');
 
   
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
+    const unsub = onAuthStateChanged(auth!, (u) => {
       setUid(u?.uid ?? null);
       setAuthReady(true);
       if (!u) router.replace("/landing");

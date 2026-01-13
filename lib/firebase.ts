@@ -1,4 +1,5 @@
-import { initializeApp, getApp, getApps } from "firebase/app";
+// lib/firebase.ts
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
@@ -11,7 +12,13 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 };
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+// ✅ IMPORTANTE: não inicializar Firebase no servidor
+const isBrowser = typeof window !== "undefined";
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+const app = isBrowser
+  ? (getApps().length ? getApp() : initializeApp(firebaseConfig))
+  : null;
+
+// exports "seguros" (no server ficam null)
+export const auth = app ? getAuth(app) : (null as any);
+export const db = app ? getFirestore(app) : (null as any);
