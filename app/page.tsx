@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Inter } from 'next/font/google';
 import '@fontsource/space-grotesk/400.css';
 import '@fontsource/space-grotesk/700.css';
 import React from 'react';
@@ -12,7 +11,7 @@ import { useRouter } from "next/navigation";
 
 
 /* -------------------- FONTS (premium) -------------------- */
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+
 
 // mantém a variável para não teres de mexer no resto do CSS
 const grotesk = { variable: '--font-grotesk' } as const;
@@ -321,10 +320,10 @@ export default function GymApp() {
   
   const [exerciseInput, setExerciseInput] = useState('');
   const [restTimer, setRestTimer] = useState<number | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [workoutNow, setWorkoutNow] = useState<number>(Date.now());
-  const workoutTickRef = useRef<NodeJS.Timeout | null>(null);
+  const workoutTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // templates editor
   const [templateNameInput, setTemplateNameInput] = useState('');
@@ -1195,11 +1194,11 @@ const [weightNote, setWeightNote] = useState('');
   /* -------------------- RENDER -------------------- */
   return (
     <main
-  className={[
-    'app-shell max-w-md mx-auto min-h-screen pb-36 text-slate-100',
-    inter.variable,
-    grotesk.variable,
-  ].join(' ')}
+    className={[
+      'app-shell max-w-md mx-auto min-h-screen pb-36 text-slate-100',
+      grotesk.variable,
+    ].join(' ')}
+    
   style={{
     fontFamily:
       'var(--font-inter), system-ui, -apple-system, Segoe UI, Roboto, Arial',
@@ -2782,10 +2781,11 @@ const [weightNote, setWeightNote] = useState('');
 
 
       {/* NAV */}
-<nav
-  className="fixed left-0 right-0 z-[150] px-6"
+      <nav
+  className="fixed left-0 right-0 z-[150] px-3"
   style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px))' }}
 >
+
   <div
     className="relative max-w-md mx-auto mb-4 rounded-[2.9rem] border border-white/10 shadow-[0_24px_90px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
     style={{
@@ -2801,7 +2801,8 @@ const [weightNote, setWeightNote] = useState('');
     {/* leve gradiente para “segurar” sobre imagens claras */}
     <div className="pointer-events-none absolute inset-0 rounded-[2.9rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(0,0,0,0.00))]" />
 
-    <div className="relative flex justify-around items-center">
+    <div className="relative overflow-x-auto no-scrollbar">
+  <div className="flex items-center justify-between gap-1 min-w-max">
       {[
         { id: 'home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
         { id: 'templates', icon: 'M9 12h6m-6 4h6m-7 4h8a2 2 0 002-2V6a2 2 0 00-2-2H8a2 2 0 00-2 2v12a2 2 0 002 2z' },
@@ -2813,9 +2814,10 @@ const [weightNote, setWeightNote] = useState('');
         <button
           key={tab.id}
           onClick={() => setActiveTab(tab.id as any)}
-          className={`relative flex flex-col items-center p-3 transition-all duration-300 rounded-2xl ${
+          className={`relative flex-none flex flex-col items-center p-2 transition-all duration-300 rounded-2xl ${
             activeTab === tab.id ? 'text-[#071018]' : 'text-slate-300'
           }`}
+          
         >
           <span
             className={`mb-1 h-10 w-10 rounded-2xl flex items-center justify-center transition-all border ${
@@ -2835,8 +2837,10 @@ const [weightNote, setWeightNote] = useState('');
           </span>
         </button>
       ))}
-    </div>
+        </div>
   </div>
+</div>
+
 </nav>
 
 <style jsx global>{`
