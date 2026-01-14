@@ -12,7 +12,13 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 };
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+// ✅ Só no browser
+const isBrowser = typeof window !== "undefined";
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+const app = isBrowser
+  ? (getApps().length ? getApp() : initializeApp(firebaseConfig))
+  : null;
+
+// ✅ exports seguros
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app) : null;
