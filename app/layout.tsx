@@ -1,6 +1,6 @@
 import "./globals.css";
+import "./env.client"; // ✅ adiciona esta linha
 import type { Metadata } from "next";
-
 
 export const metadata: Metadata = {
   title: "Overload",
@@ -17,15 +17,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt">
-  <body className="min-h-screen bg-[#070B14] text-white">{children}</body>
-</html>
-
+      <body>{children}</body>
+    </html>
   );
 }
