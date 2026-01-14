@@ -1,0 +1,13 @@
+# Next.js
+/.next
+/.next/
+/out
+/out/
+
+# deps
+/node_modules
+/node_modules/
+
+# env
+.env.local
+.env.*.local
