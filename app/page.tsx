@@ -94,6 +94,25 @@ const normalizeName = (raw: string) => {
   return lowered.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 };
 
+const EXERCISE_ALIASES: Array<{ canonical: string; aliases: string[]; display: string }> = [
+  { canonical: 'bench_press', display: 'Supino', aliases: ['supino', 'bench press', 'benchpress', 'chest press', 'press de peito'] },
+  { canonical: 'squat', display: 'Agachamento', aliases: ['agachamento', 'squat', 'back squat', 'front squat'] },
+  { canonical: 'deadlift', display: 'Levantamento Terra', aliases: ['levantamento terra', 'terra', 'deadlift'] },
+  { canonical: 'row', display: 'Remada', aliases: ['remada', 'row', 'barbell row', 'dumbbell row'] },
+  { canonical: 'pull_up', display: 'Barra', aliases: ['barra', 'pull up', 'pull-up', 'chin up', 'chin-up'] },
+];
+
+const canonicalizeExercise = (raw: string) => {
+  const n = normalizeName(raw);
+  const hit = EXERCISE_ALIASES.find(x => x.aliases.some(a => n === normalizeName(a) || n.includes(normalizeName(a))));
+  if (!hit) {
+    // fallback: usa normalização normal (mantém comportamento atual)
+    return { canonicalId: n, displayName: raw.trim().replace(/\s+/g, ' ') };
+  }
+  return { canonicalId: hit.canonical, displayName: hit.display };
+};
+
+
 /* -------------------- IMAGE POOL (ONLINE • GYM ONLY • ESTÁVEL) -------------------- */
 
 /**
@@ -830,7 +849,8 @@ const [weightNote, setWeightNote] = useState('');
     const nextStats: Record<string, ExerciseStats> = { ...exerciseStats };
   
     for (const ex of sessionToSave.exercises) {
-      const normalized = normalizeName(ex.name);
+      const normalized = ex.exerciseId || normalizeName(ex.name);
+
       const display = ex.name.trim();
   
       const completedSets = ex.sets.filter((s) => s.completed);
@@ -982,22 +1002,18 @@ const [weightNote, setWeightNote] = useState('');
 
   const addExercise = (name: string) => {
     if (!name || !currentSession) return;
-    const normalized = normalizeName(name);
-    if (!normalized) return;
+    const { canonicalId, displayName } = canonicalizeExercise(name);
+if (!canonicalId) return;
 
-    const already = currentSession.exercises.some(
-      (e) => normalizeName(e.name) === normalized
-    );
-    if (already) {
-      setExerciseInput('');
-      return;
-    }
+const already = currentSession.exercises.some(
+  (e) => e.exerciseId === canonicalId
+);
 
-    const displayName = name.trim().replace(/\s+/g, ' ');
-    const newEx: SessionExercise = {
-      id: crypto.randomUUID(),
-      exerciseId: normalized,
-      name: displayName.toUpperCase(),
+const newEx: SessionExercise = {
+  id: crypto.randomUUID(),
+  exerciseId: canonicalId,
+  name: displayName.toUpperCase(),
+
       sets: [
         { id: crypto.randomUUID(), weightKg: 0, reps: 0, completed: false },
       ],
