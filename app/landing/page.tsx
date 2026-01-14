@@ -34,8 +34,15 @@ export default function LandingPage() {
     setErr(null);
     setLoading(true);
   
+    if (!auth) {
+      setErr("Firebase auth não está inicializado (confere .env.local).");
+      setLoading(false);
+      return;
+    }
+  
     try {
       const provider = new GoogleAuthProvider();
+  
   
       // tenta popup primeiro (melhor no Vercel/desktop)
       await signInWithPopup(auth, provider);
@@ -55,12 +62,15 @@ export default function LandingPage() {
   
   
   useEffect(() => {
-    // Apanha o resultado do login via redirect (quando volta do Google)
+    if (!auth) return;
     getRedirectResult(auth).catch(() => {});
   }, []);
   
+  
 
   useEffect(() => {
+    if (!auth) return;
+  
     const unsub = onAuthStateChanged(auth, (u) => {
       setUserEmail(u?.email ?? null);
       setChecking(false);
@@ -71,23 +81,31 @@ export default function LandingPage() {
   const submit = async () => {
     setErr(null);
     setLoading(true);
+  
+    if (!auth) {
+      setErr("Firebase auth não está inicializado (confere .env.local).");
+      setLoading(false);
+      return;
+    }
+  
     try {
       const e = email.trim();
       if (!e || !password) return;
-
+  
       if (mode === "signup") {
         await createUserWithEmailAndPassword(auth, e, password);
       } else {
         await signInWithEmailAndPassword(auth, e, password);
       }
-
-      router.replace("/"); // 👉 vai para a tua app (app/page.tsx)
+  
+      router.replace("/");
     } catch (e: any) {
       setErr(e?.message ?? "Erro no login");
     } finally {
       setLoading(false);
     }
   };
+  
 
   if (checking) return null;
 
@@ -124,9 +142,11 @@ export default function LandingPage() {
                   </button>
                   <button
                     onClick={async () => {
+                      if (!auth) return;
                       await signOut(auth);
                       setUserEmail(null);
                     }}
+                    
                     className="rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest bg-white/5 border border-white/10 text-white active:scale-95"
                   >
                     Sair

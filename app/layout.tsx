@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
 import "./globals.css";
+import type { Metadata } from "next";
+
 
 export const metadata: Metadata = {
   title: "Overload",
@@ -23,7 +24,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt">
-      <body>{children}</body>
-    </html>
+  <body className="min-h-screen bg-[#070B14] text-white">{children}</body>
+</html>
+
   );
 }
