@@ -1,4 +1,19 @@
-// lib/firebase.ts
+const required = [
+  "NEXT_PUBLIC_FIREBASE_API_KEY",
+  "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+  "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+  "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
+  "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+  "NEXT_PUBLIC_FIREBASE_APP_ID",
+] as const;
+
+for (const k of required) {
+  if (!process.env[k]) {
+    throw new Error(`Missing env var: ${k}`);
+  }
+}
+
+
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
@@ -12,13 +27,7 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
 };
 
-// ✅ Só no browser
-const isBrowser = typeof window !== "undefined";
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-const app = isBrowser
-  ? (getApps().length ? getApp() : initializeApp(firebaseConfig))
-  : null;
-
-// ✅ exports seguros
-export const auth = app ? getAuth(app) : null;
-export const db = app ? getFirestore(app) : null;
+export const auth = getAuth(app);
+export const db = getFirestore(app);
