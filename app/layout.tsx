@@ -1,6 +1,6 @@
 import "./globals.css";
-import "./env.client"; // ✅ adiciona esta linha
 import type { Metadata } from "next";
+
 
 export const metadata: Metadata = {
   title: "Overload",
