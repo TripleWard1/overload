@@ -34,12 +34,6 @@ export default function LandingPage() {
     setErr(null);
     setLoading(true);
   
-    if (!auth) {
-      setErr("Firebase auth não está inicializado (confere .env.local).");
-      setLoading(false);
-      return;
-    }
-  
     try {
       const provider = new GoogleAuthProvider();
   
@@ -62,15 +56,14 @@ export default function LandingPage() {
   
   
   useEffect(() => {
-    if (!auth) return;
     getRedirectResult(auth).catch(() => {});
   }, []);
   
   
+  
 
   useEffect(() => {
-    if (!auth) return;
-  
+     
     const unsub = onAuthStateChanged(auth, (u) => {
       setUserEmail(u?.email ?? null);
       setChecking(false);

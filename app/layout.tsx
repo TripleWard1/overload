@@ -17,10 +17,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="pt">
-      <body>{children}</body>
-    </html>
+  <body className="min-h-screen bg-[#070B14] text-white">{children}</body>
+</html>
+
   );
 }

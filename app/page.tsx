@@ -8,9 +8,6 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { loadUserCollection, upsertUserDoc, deleteUserDoc } from "@/lib/db";
 import { useRouter } from "next/navigation";
-import { getOrCreateUserProfile, updateUserDisplayName } from "@/lib/profile";
-import { fetchExerciseRanking } from "@/lib/rankings";
-
 
 
 /* -------------------- FONTS (premium) -------------------- */
@@ -98,174 +95,12 @@ const normalizeName = (raw: string) => {
 };
 
 const EXERCISE_ALIASES: Array<{ canonical: string; aliases: string[]; display: string }> = [
-  // --- PEITO / SUPINO ---
-  {
-    canonical: "bench_press",
-    display: "Supino",
-    aliases: [
-      "supino", "supino reto", "supino plano", "supino barra", "supino com barra",
-      "bench press", "flat bench", "barbell bench", "chest press", "press de peito",
-      "bench", "bp", "supino powerlifting",
-      "desenvolvimento horizontal", "press horizontal",
-      "machine chest press", "pec press (errado mas comum)", "press peito",
-    ],
-  },
-  {
-    canonical: "incline_bench_press",
-    display: "Supino Inclinado",
-    aliases: [
-      "supino inclinado", "incline bench", "incline bench press", "inclined bench press",
-      "supino inclinado barra", "supino inclinado halteres", "incline dumbbell press",
-      "press inclinado", "press peito inclinado",
-    ],
-  },
-  {
-    canonical: "dips",
-    display: "Paralelas",
-    aliases: [
-      "paralelas", "dips", "chest dips", "triceps dips", "fundos", "fundos nas paralelas",
-    ],
-  },
-
-  // --- AGACHAMENTO / PERNAS ---
-  {
-    canonical: "squat",
-    display: "Agachamento",
-    aliases: [
-      "agachamento", "agachamento livre", "agachamento barra", "back squat",
-      "squat", "barbell squat", "high bar squat", "low bar squat",
-      "agachamento powerlifting", "deep squat", "full squat",
-    ],
-  },
-  {
-    canonical: "front_squat",
-    display: "Agachamento Frontal",
-    aliases: ["agachamento frontal", "front squat", "fs"],
-  },
-  {
-    canonical: "leg_press",
-    display: "Leg Press",
-    aliases: [
-      "leg press", "prensa", "prensa de pernas", "45 leg press", "pressa", "legpress",
-    ],
-  },
-  {
-    canonical: "lunges",
-    display: "Lunges",
-    aliases: [
-      "lunge", "lunges", "passada", "passadas", "afundos", "walking lunge",
-      "split squat (muito usado)", "bulgarian split squat (variante)",
-    ],
-  },
-
-  // --- TERRA / POSTERIOR ---
-  {
-    canonical: "deadlift",
-    display: "Levantamento Terra",
-    aliases: [
-      "levantamento terra", "terra", "deadlift", "dl",
-      "conventional deadlift", "sumo deadlift", "sumo",
-      "levantamento do chão", "peso morto (muito comum)",
-    ],
-  },
-  {
-    canonical: "romanian_deadlift",
-    display: "RDL",
-    aliases: [
-      "rdl", "romanian deadlift", "levantamento terra romeno", "terra romeno",
-      "stiff", "stiff leg deadlift", "peso morto romeno",
-    ],
-  },
-  {
-    canonical: "hip_thrust",
-    display: "Hip Thrust",
-    aliases: [
-      "hip thrust", "elevação pélvica", "glute bridge (muito usado)", "ponte de glúteos",
-    ],
-  },
-
-  // --- COSTAS / REMADAS / PUXADAS ---
-  {
-    canonical: "row",
-    display: "Remada",
-    aliases: [
-      "remada", "remada barra", "barbell row", "row", "bent over row",
-      "remada curvada", "seal row", "dumbbell row", "one arm row", "remada halter",
-    ],
-  },
-  {
-    canonical: "pull_up",
-    display: "Barra",
-    aliases: [
-      "barra", "pull up", "pull-up", "chin up", "chin-up",
-      "tractions", "elevações", "elevação na barra", "barfiks (estrangeiro)",
-    ],
-  },
-  {
-    canonical: "lat_pulldown",
-    display: "Puxada na Polia",
-    aliases: [
-      "lat pulldown", "pulldown", "puxada", "puxada na polia", "puxada frontal",
-      "pull down", "high pulley", "puxada aberta", "puxada fechada",
-    ],
-  },
-
-  // --- OMBROS ---
-  {
-    canonical: "overhead_press",
-    display: "OHP",
-    aliases: [
-      "ohp", "overhead press", "military press", "desenvolvimento militar",
-      "press militar", "shoulder press barra", "press acima da cabeça",
-    ],
-  },
-  {
-    canonical: "dumbbell_shoulder_press",
-    display: "Shoulder Press Halteres",
-    aliases: [
-      "shoulder press", "dumbbell shoulder press", "press ombro halteres",
-      "desenvolvimento halteres",
-    ],
-  },
-  {
-    canonical: "lateral_raise",
-    display: "Elevação Lateral",
-    aliases: [
-      "elevação lateral", "lateral raise", "side raise", "deltoid raise",
-      "elevacao lateral", "elevação de ombro lateral",
-    ],
-  },
-
-  // --- BRAÇOS ---
-  {
-    canonical: "biceps_curl",
-    display: "Rosca Bíceps",
-    aliases: [
-      "rosca", "rosca biceps", "rosca bíceps", "biceps curl", "curl",
-      "rosca direta", "barbell curl", "dumbbell curl", "hammer curl", "rosca martelo",
-    ],
-  },
-  {
-    canonical: "triceps_extension",
-    display: "Tríceps",
-    aliases: [
-      "triceps", "tríceps", "tricep extension", "triceps extension",
-      "pushdown", "triceps pushdown", "puxada tríceps", "corda tríceps",
-      "skullcrusher", "testa", "extensão tríceps",
-    ],
-  },
-
-  // --- ABS ---
-  {
-    canonical: "abs",
-    display: "Abdominais",
-    aliases: [
-      "abs", "abdominais", "core", "crunch", "crunches", "sit up", "sit-up",
-      "leg raises", "elevação de pernas", "prancha", "plank",
-    ],
-  },
+  { canonical: 'bench_press', display: 'Supino', aliases: ['supino', 'bench press', 'benchpress', 'chest press', 'press de peito'] },
+  { canonical: 'squat', display: 'Agachamento', aliases: ['agachamento', 'squat', 'back squat', 'front squat'] },
+  { canonical: 'deadlift', display: 'Levantamento Terra', aliases: ['levantamento terra', 'terra', 'deadlift'] },
+  { canonical: 'row', display: 'Remada', aliases: ['remada', 'row', 'barbell row', 'dumbbell row'] },
+  { canonical: 'pull_up', display: 'Barra', aliases: ['barra', 'pull up', 'pull-up', 'chin up', 'chin-up'] },
 ];
-
 
 const canonicalizeExercise = (raw: string) => {
   const n = normalizeName(raw);
@@ -447,27 +282,6 @@ const formatDuration = (seconds: number) => {
   return hh > 0 ? `${pad(hh)}:${pad(mm)}:${pad(ss)}` : `${pad(mm)}:${pad(ss)}`;
 };
 
-const LS_SESSIONS_KEY = "overload_sessions_cache_v1";
-
-function loadCachedSessions(): Session[] {
-  try {
-    const raw = localStorage.getItem(LS_SESSIONS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCachedSessions(sessions: Session[]) {
-  try {
-    // guarda só as últimas 60 para não crescer infinito
-    localStorage.setItem(LS_SESSIONS_KEY, JSON.stringify(sessions.slice(0, 60)));
-  } catch {}
-}
-
-
 // --- COLAR ESTA FUNÇÃO DE IMAGENS LOGO ABAIXO DO LOGO ---
 const getExerciseImage = (name: string) => {
   const n = name?.toLowerCase() || '';
@@ -508,130 +322,8 @@ const getExerciseImage = (name: string) => {
 /* -------------------- APP -------------------- */
 type TabId = 'home' | 'train' | 'history' | 'calendar' | 'templates' | 'peso' | 'profile';
 
-
-function RankingsView({ onBack }: { onBack: () => void }) {
-  const [loading, setLoading] = useState(true);
-  const [bench, setBench] = useState<any[]>([]);
-  const [squat, setSquat] = useState<any[]>([]);
-  const [deadlift, setDeadlift] = useState<any[]>([]);
-
-  useEffect(() => {
-    let alive = true;
-
-    (async () => {
-      try {
-        setLoading(true);
-        const [b, s, d] = await Promise.all([
-          fetchExerciseRanking("bench_press", 20),
-          fetchExerciseRanking("squat", 20),
-          fetchExerciseRanking("deadlift", 20),
-        ]);
-        if (!alive) return;
-        setBench(b);
-        setSquat(s);
-        setDeadlift(d);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const Block = ({ title, rows }: { title: string; rows: any[] }) => (
-    <div className="card-premium rounded-[2.25rem] p-6">
-      <div className="flex items-center justify-between">
-        <div className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-300">
-          Ranking
-        </div>
-        <div className="text-[12px] font-black italic uppercase text-white">
-          {title}
-        </div>
-      </div>
-
-      <div className="mt-4 space-y-2">
-        {rows.length === 0 ? (
-          <div className="text-slate-300 text-xs font-bold">
-            Ainda sem registos.
-          </div>
-        ) : (
-          rows.map((r, idx) => (
-            <div
-              key={r.uid + idx}
-              className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-4 py-3"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center text-[10px] font-black">
-                  {idx + 1}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-white font-black text-sm truncate">
-                    {r.displayName}
-                  </div>
-                  <div className="text-[10px] text-slate-300 font-mono uppercase">
-                    {typeof r.bestReps === "number" ? `× ${r.bestReps}` : ""}
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-white font-black italic">
-                {typeof r.bestWeight === "number" ? `${r.bestWeight}kg` : "—"}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="p-6 animate-in pb-36 space-y-5">
-      <div className="flex items-center justify-between gap-3 pt-2">
-        <div>
-          <div className="text-[10px] font-black uppercase tracking-[0.38em] text-slate-300">
-            OVERLOAD
-          </div>
-          <h2 className="text-[28px] font-black italic uppercase tracking-[-0.04em] leading-none text-white">
-            Rankings
-          </h2>
-          <div className="text-[10px] font-black uppercase tracking-[0.26em] text-slate-300 mt-2">
-            PRs globais
-          </div>
-        </div>
-
-        <button
-          onClick={onBack}
-          className="btn-soft px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95"
-        >
-          Home
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="card-premium rounded-[2.25rem] p-6 text-slate-300 text-xs font-bold">
-          A carregar rankings...
-        </div>
-      ) : (
-        <>
-          <Block title="Supino" rows={bench} />
-          <Block title="Agachamento" rows={squat} />
-          <Block title="Levantamento Terra" rows={deadlift} />
-        </>
-      )}
-    </div>
-  );
-}
-
-
 export default function GymApp() {
   
-const [displayName, setDisplayName] = useState<string>("—");
-const [displayNameDraft, setDisplayNameDraft] = useState<string>("");
-const [showRankings, setShowRankings] = useState(false);
-
-
 
 const [activeTab, setActiveTab] = useState<TabId>('home');
 
@@ -701,24 +393,13 @@ const [weightNote, setWeightNote] = useState('');
 
   
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth!, async (u) => {
+    const unsub = onAuthStateChanged(auth!, (u) => {
       setUid(u?.uid ?? null);
       setAuthReady(true);
-  
-      if (!u) {
-        router.replace("/landing");
-        return;
-      }
-  
-      // ✅ garante perfil e nome
-      const p = await getOrCreateUserProfile(u.uid, u.email);
-      setDisplayName(p.displayName);
-      setDisplayNameDraft(p.displayName);
+      if (!u) router.replace("/landing");
     });
-  
     return () => unsub();
   }, [router]);
-  
 
   useEffect(() => {
     if (!uid) return;
@@ -741,20 +422,7 @@ const [weightNote, setWeightNote] = useState('');
         // weights oldest-first (como tinhas no memo)
         wts.sort((a, b) => new Date(a.dateIso).getTime() - new Date(b.dateIso).getTime());
   
-        const cached = loadCachedSessions();
-
-// merge por id (Firestore tem prioridade)
-const map = new Map<string, Session>();
-for (const s of cached) map.set(s.id, s);
-for (const s of sess) map.set(s.id, s);
-
-const merged = Array.from(map.values()).sort(
-  (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
-);
-
-setSessions(merged);
-saveCachedSessions(merged);
-
+        setSessions(sess);
         setExerciseStats(
           // caso o teu exerciseStats seja Record<string, ExerciseStats>,
           // guarda cada stat como doc com id = normalizedName (ver nota abaixo)
@@ -1156,10 +824,6 @@ saveCachedSessions(merged);
   const saveWorkout = async () => {
     if (!currentSession) return;
   
-    // ✅ bloqueia duplo clique
-    // (opcional mas recomendado)
-    // if (saving) return;
-  
     const endedAt = new Date().toISOString();
     const durationSeconds = computeDurationSeconds(currentSession.startedAt, endedAt);
   
@@ -1174,152 +838,154 @@ saveCachedSessions(merged);
       },
     };
   
-    // ✅ Atualiza UI logo (mesmo se a cloud falhar)
-    setSessions((prev) => {
-      const next = [sessionToSave, ...prev];
-      saveCachedSessions(next);
-      return next;
-    });
+    const updated = [sessionToSave, ...sessions];
+    setSessions(updated);
+  
+    if (uid) {
+      try {
+        await upsertUserDoc(uid, "sessions", sessionToSave);
+      } catch (e: any) {
+        console.error("Firestore save sessions error:", e?.code, e?.message, e);
+        setToastText(`Erro a guardar na cloud: ${e?.code ?? "desconhecido"}`);
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 2200);
+        return; // <- MUITO IMPORTANTE: para não continuar a gravar stats/templates
+      }
+    }
     
   
-    // ✅ Fecha o treino e confirma ao utilizador imediatamente
-    setToastText("A guardar na cloud…");
-setShowSuccessToast(true);
-setTimeout(() => setShowSuccessToast(false), 1600);
+    // update stats
+    const nextStats: Record<string, ExerciseStats> = { ...exerciseStats };
+  
+    for (const ex of sessionToSave.exercises) {
+      const normalized = ex.exerciseId || normalizeName(ex.name);
 
+      const display = ex.name.trim();
   
-    try {
-      if (!uid) return;
+      const completedSets = ex.sets.filter((s) => s.completed);
+      const candidateLast =
+        [...completedSets].reverse().find((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0) ??
+        [...ex.sets].reverse().find((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
   
-      // 1) guarda a sessão
-      console.log("Saving session to Firestore:", uid, sessionToSave.id);
-      await upsertUserDoc(uid, "sessions", sessionToSave);
+      const lastWeight = candidateLast?.weightKg;
+      const lastReps = candidateLast?.reps;
   
-      // 2) calcula stats localmente
-      const nextStats: Record<string, ExerciseStats> = { ...exerciseStats };
+      const validSets = ex.sets
+        .filter((s) => s.completed)
+        .filter((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
   
-      const statWrites: Promise<any>[] = [];
+      const fallbackSets = ex.sets.filter((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
+      const allSets = validSets.length ? validSets : fallbackSets;
   
-      for (const ex of sessionToSave.exercises) {
-        const normalized = ex.exerciseId || normalizeName(ex.name);
-        const display = (EXERCISE_ALIASES.find(a => a.canonical === normalized)?.display) ?? ex.name.trim();
-
+      const best = allSets.reduce<{ w?: number; r?: number }>(
+        (acc, s) => {
+          const w = s.weightKg || 0;
+          const r = s.reps || 0;
+          const accW = acc.w ?? -1;
+          const accR = acc.r ?? -1;
+          if (w > accW) return { w, r };
+          if (w === accW && r > accR) return { w, r };
+          return acc;
+        },
+        {
+          w: nextStats[normalized]?.bestWeight,
+          r: nextStats[normalized]?.bestReps,
+        }
+      );
   
-        const completedSets = ex.sets.filter((s) => s.completed);
-        const candidateLast =
-          [...completedSets].reverse().find((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0) ??
-          [...ex.sets].reverse().find((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
-  
-        const lastWeight = candidateLast?.weightKg;
-        const lastReps = candidateLast?.reps;
-  
-        const validSets = ex.sets
-          .filter((s) => s.completed)
-          .filter((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
-  
-        const fallbackSets = ex.sets.filter((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
-        const allSets = validSets.length ? validSets : fallbackSets;
-  
-        const best = allSets.reduce<{ w?: number; r?: number }>(
-          (acc, s) => {
-            const w = s.weightKg || 0;
-            const r = s.reps || 0;
-            const accW = acc.w ?? -1;
-            const accR = acc.r ?? -1;
-            if (w > accW) return { w, r };
-            if (w === accW && r > accR) return { w, r };
-            return acc;
-          },
-          {
-            w: nextStats[normalized]?.bestWeight,
-            r: nextStats[normalized]?.bestReps,
-          }
-        );
-  
-        const prev = nextStats[normalized];
-        nextStats[normalized] = {
-          normalizedName: normalized,
-          displayName: prev?.displayName ?? display,
-          lastDate: endedAt,
-          lastWeight: typeof lastWeight === "number" ? lastWeight : prev?.lastWeight,
-          lastReps: typeof lastReps === "number" ? lastReps : prev?.lastReps,
-          bestWeight: typeof best.w === "number" ? best.w : prev?.bestWeight,
-          bestReps: typeof best.r === "number" ? best.r : prev?.bestReps,
-          usageCount: (prev?.usageCount ?? 0) + 1,
-        };
-  
-        // ✅ escreve stats (doc id = normalized)
-        statWrites.push(
-          upsertUserDoc(uid, "exerciseStats", { id: normalized, ...nextStats[normalized] } as any)
-        );
-      }
-  
-      // ✅ aplica stats no estado (não precisa esperar firestore)
-      setExerciseStats(nextStats);
-  
-      // ✅ escreve todos os stats em paralelo
-      await Promise.all(statWrites);
-  
-      // 3) auto-template
-      const tplNormalized = normalizeName(sessionToSave.name);
-      const tplExercises: TemplateExercise[] = sessionToSave.exercises.map((ex) => {
-        const n = ex.exerciseId || normalizeName(ex.name);
-        const displayName = ex.name.trim();
-        const targetSets = Math.max(1, ex.sets.length);
-  
-        const repsValues = ex.sets.map((s) => s.reps).filter((v) => typeof v === "number");
-        const freq = repsValues.reduce<Record<number, number>>((m, v) => {
-          m[v] = (m[v] || 0) + 1;
-          return m;
-        }, {});
-        const mode = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0];
-        const targetReps =
-          typeof mode !== "undefined" ? Number(mode) : repsValues.reverse().find((v) => v > 0) ?? undefined;
-  
-        return { normalizedName: n, displayName, targetSets, targetReps };
-      });
-  
-      const nextTemplate: WorkoutTemplate = {
-        id: crypto.randomUUID(),
-        normalizedName: tplNormalized,
-        displayName: sessionToSave.name,
-        updatedAt: endedAt,
-        exercises: tplExercises,
+      const prev = nextStats[normalized];
+      nextStats[normalized] = {
+        normalizedName: normalized,
+        displayName: prev?.displayName ?? display,
+        lastDate: endedAt,
+        lastWeight: typeof lastWeight === 'number' ? lastWeight : prev?.lastWeight,
+        lastReps: typeof lastReps === 'number' ? lastReps : prev?.lastReps,
+        bestWeight: typeof best.w === 'number' ? best.w : prev?.bestWeight,
+        bestReps: typeof best.r === 'number' ? best.r : prev?.bestReps,
+        usageCount: (prev?.usageCount ?? 0) + 1,
       };
   
-      setTemplates((prev) => {
-        const existingIdx = prev.findIndex((t) => t.normalizedName === tplNormalized);
-        if (existingIdx >= 0) {
-          const copy = [...prev];
-          nextTemplate.id = copy[existingIdx].id;
-          copy[existingIdx] = nextTemplate;
-          return copy;
+      // ✅ GRAVAR STAT POR EXERCÍCIO (doc id = normalized)
+      if (uid) {
+        try {
+          await upsertUserDoc(uid, "exerciseStats", { id: normalized, ...nextStats[normalized] } as any);
+        } catch (e: any) {
+          console.error("Firestore save exerciseStats error:", e?.code, e?.message, e);
+          setToastText(`Erro a guardar stats: ${e?.code ?? "desconhecido"}`);
+          setShowSuccessToast(true);
+          setTimeout(() => setShowSuccessToast(false), 2200);
+          return;
         }
-        return [nextTemplate, ...prev];
-      });
+      }
       
-
-      await upsertUserDoc(uid, "templates", nextTemplate);
-      setToastText("Treino guardado");
-      setShowSuccessToast(true);
-      setTimeout(() => setShowSuccessToast(false), 1600);
-      
-      setCurrentSession(null);
-      setActiveTab("calendar");
-      
-    } catch (e) {
-      console.error("saveWorkout firestore error:", e);
-  
-      // ✅ Se falhar cloud, informa (mas a sessão local já foi fechada)
-      setToastText("Erro a guardar na cloud. Tenta outra vez.");
-setShowSuccessToast(true);
-setTimeout(() => setShowSuccessToast(false), 2200);
-
     }
+  
+    setExerciseStats(nextStats);
+  
+    // ✅ AUTO-TEMPLATE (gravar no firestore também)
+    const tplNormalized = normalizeName(sessionToSave.name);
+    const tplExercises: TemplateExercise[] = sessionToSave.exercises.map((ex) => {
+      const n = normalizeName(ex.name);
+      const displayName = ex.name.trim();
+      const targetSets = Math.max(1, ex.sets.length);
+      const repsValues = ex.sets.map((s) => s.reps).filter((v) => typeof v === 'number');
+  
+      const freq = repsValues.reduce<Record<number, number>>((m, v) => {
+        m[v] = (m[v] || 0) + 1;
+        return m;
+      }, {});
+  
+      const mode = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0];
+      const targetReps =
+        typeof mode !== 'undefined'
+          ? Number(mode)
+          : repsValues.reverse().find((v) => v > 0) ?? undefined;
+  
+      return { normalizedName: n, displayName, targetSets, targetReps };
+    });
+  
+    const nextTemplate: WorkoutTemplate = {
+      id: crypto.randomUUID(),
+      normalizedName: tplNormalized,
+      displayName: sessionToSave.name,
+      updatedAt: endedAt,
+      exercises: tplExercises,
+    };
+  
+    setTemplates((prev) => {
+      const existingIdx = prev.findIndex((t) => t.normalizedName === tplNormalized);
+      if (existingIdx >= 0) {
+        const copy = [...prev];
+        nextTemplate.id = copy[existingIdx].id; // mantém id se já existe
+        copy[existingIdx] = nextTemplate;
+        return copy;
+      }
+      return [nextTemplate, ...prev];
+    });
+  
+    if (uid) {
+      try {
+        await upsertUserDoc(uid, "templates", nextTemplate);
+      } catch (e: any) {
+        console.error("Firestore save templates error:", e?.code, e?.message, e);
+        setToastText(`Erro a guardar template: ${e?.code ?? "desconhecido"}`);
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 2200);
+        return;
+      }
+    }
+    
+  
+    setToastText('Treino guardado');
+    setShowSuccessToast(true);
+    setTimeout(() => setShowSuccessToast(false), 1600);
+  
+    setCurrentSession(null);
+    setActiveTab('calendar');
   };
   
-  
-    const updateSet = (exIdx: number, sIdx: number, data: Partial<Set>) => {
+
+  const updateSet = (exIdx: number, sIdx: number, data: Partial<Set>) => {
     if (!currentSession) return;
 
     const ex = currentSession.exercises[exIdx];
@@ -1332,8 +998,7 @@ setTimeout(() => setShowSuccessToast(false), 2200);
     const nextSession = { ...currentSession, exercises };
 
     if (data.completed === true) {
-      const exNorm = ex.exerciseId || normalizeName(ex.name);
-
+      const exNorm = normalizeName(ex.name);
       const tpl = templates.find(
         (t) => normalizeName(t.displayName) === normalizeName(nextSession.name)
       );
@@ -1364,30 +1029,29 @@ setTimeout(() => setShowSuccessToast(false), 2200);
 
   const addExercise = (name: string) => {
     if (!name || !currentSession) return;
-  
     const { canonicalId, displayName } = canonicalizeExercise(name);
-    if (!canonicalId) return;
-  
-    const already = currentSession.exercises.some((e) => e.exerciseId === canonicalId);
-    if (already) {
-      setExerciseInput('');
-      return;
-    }
-  
-    const newEx: SessionExercise = {
-      id: crypto.randomUUID(),
-      exerciseId: canonicalId,
-      name: displayName.toUpperCase(),
-      sets: [{ id: crypto.randomUUID(), weightKg: 0, reps: 0, completed: false }],
+if (!canonicalId) return;
+
+const already = currentSession.exercises.some(
+  (e) => e.exerciseId === canonicalId
+);
+
+const newEx: SessionExercise = {
+  id: crypto.randomUUID(),
+  exerciseId: canonicalId,
+  name: displayName.toUpperCase(),
+
+      sets: [
+        { id: crypto.randomUUID(), weightKg: 0, reps: 0, completed: false },
+      ],
     };
-  
+
     setCurrentSession({
       ...currentSession,
       exercises: [...currentSession.exercises, newEx],
     });
     setExerciseInput('');
   };
-  
 
   const removeSession = async (id: string) => {
     setSessions((prev) => prev.filter((s) => s.id !== id));
@@ -2438,8 +2102,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
           <div className="p-4 space-y-6 pb-44">
             {currentSession.exercises.map((ex, exIdx) => {
               const thumb = pickImageFor(ex.name);
-              const perf = exerciseStats[ex.exerciseId || normalizeName(ex.name)];
-
+              const perf = exerciseStats[normalizeName(ex.name)];
 
               return (
                 <div
@@ -3178,7 +2841,6 @@ const TABS: Array<{ id: TabId; icon: string }> = [
 )}
 
 {activeTab === 'profile' && (
-  
   <div className="p-6 animate-in pb-36">
     <div className="flex items-center justify-between gap-4 mb-8 pt-2">
       <div className="flex items-center gap-4 min-w-0">
@@ -3207,29 +2869,6 @@ const TABS: Array<{ id: TabId; icon: string }> = [
       </button>
     </div>
 
-    <button
-  onClick={() => setShowRankings(true)}
-  className="w-full rounded-[2.75rem] p-[2px] bg-[linear-gradient(90deg,#22c55e,#a3e635)] shadow-[0_30px_110px_rgba(34,197,94,0.18)] active:scale-95 transition-all"
->
-  <div className="rounded-[2.65rem] bg-[#070B14]/85 backdrop-blur-xl p-7 flex justify-between items-center border border-white/10">
-    <div className="text-left">
-      <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
-        Rankings
-      </div>
-      <div className="text-2xl font-black italic uppercase leading-none mt-2 text-white">
-        Ver PRs globais
-      </div>
-      <div className="text-slate-300 text-xs font-bold uppercase tracking-widest mt-2">
-        Supino • Agachamento • Terra
-      </div>
-    </div>
-    <div className="h-12 w-12 rounded-2xl bg-white/10 border border-white/10 text-white flex items-center justify-center shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
-      🏆
-    </div>
-  </div>
-</button>
-
-
     <div className="card-premium rounded-[2.5rem] p-6">
       <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
         Sessão
@@ -3238,39 +2877,6 @@ const TABS: Array<{ id: TabId; icon: string }> = [
       <div className="mt-3 text-white font-black italic text-lg">
         {auth?.currentUser?.email ?? '—'}
       </div>
-
-      <div className="mt-2 text-slate-300 text-xs font-bold">
-  Nome: <span className="text-white font-black">{displayName}</span>
-</div>
-
-
-      <div className="mt-4 bg-white/5 border border-white/10 rounded-2xl p-4">
-  <div className="text-[9px] font-black uppercase tracking-widest text-slate-300">
-    Nome público (Rankings)
-  </div>
-
-  <input
-    value={displayNameDraft}
-    onChange={(e) => setDisplayNameDraft(e.target.value)}
-    placeholder="O teu nome (ex: Hugo Barros)"
-    className="mt-2 w-full bg-transparent outline-none font-black text-white"
-  />
-
-  <button
-    onClick={async () => {
-      if (!uid) return;
-      const v = displayNameDraft.trim();
-      if (!v) return;
-      await updateUserDisplayName(uid, v);
-      setDisplayName(v);
-      setDisplayNameDraft(v);
-    }}
-    className="mt-3 w-full btn-primary px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95"
-  >
-    Guardar nome
-  </button>
-</div>
-
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
@@ -3296,28 +2902,6 @@ const TABS: Array<{ id: TabId; icon: string }> = [
   </div>
 )}
 
-{showRankings && (
-  <div className="fixed inset-0 z-[260] modal-overlay p-4">
-    <div className="max-w-md mx-auto mt-6 modal-panel rounded-[2.75rem] overflow-hidden">
-      <div className="p-4 border-b border-white/10 flex items-center justify-between">
-        <div className="text-white font-black italic uppercase tracking-tighter">
-          Rankings
-        </div>
-        <button
-          onClick={() => setShowRankings(false)}
-          className="btn-soft px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95"
-        >
-          Fechar
-        </button>
-      </div>
-
-      <div className="p-0">
-        {/* Reutiliza o teu componente */}
-        <RankingsView onBack={() => setShowRankings(false)} />
-      </div>
-    </div>
-  </div>
-)}
 
       {/* NAV */}
       <nav
