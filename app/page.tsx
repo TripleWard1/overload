@@ -7,6 +7,8 @@ import React from 'react';
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { loadUserCollection, upsertUserDoc, deleteUserDoc } from "@/lib/db";
+import { getOrCreateUserProfile, updateUserDisplayName } from "@/lib/profile";
+import { fetchExerciseRanking } from "@/lib/rankings";
 import { useRouter } from "next/navigation";
 
 
@@ -320,7 +322,16 @@ const getExerciseImage = (name: string) => {
 };
 
 /* -------------------- APP -------------------- */
-type TabId = 'home' | 'train' | 'history' | 'calendar' | 'templates' | 'peso' | 'profile';
+type TabId =
+  | 'home'
+  | 'train'
+  | 'history'
+  | 'calendar'
+  | 'templates'
+  | 'peso'
+  | 'profile'
+  | 'rankings';
+
 
 export default function GymApp() {
   
@@ -339,6 +350,16 @@ const [activeTab, setActiveTab] = useState<TabId>('home');
   const router = useRouter();
   const [authReady, setAuthReady] = useState(false);
   const [uid, setUid] = useState<string | null>(null);
+  // ---- PROFILE (nome no ranking) ----
+const [displayName, setDisplayName] = useState<string>("");
+const [nameInput, setNameInput] = useState<string>("");
+const [savingName, setSavingName] = useState(false);
+
+// ---- RANKINGS ----
+const [rankingExercise, setRankingExercise] = useState<string>("bench_press");
+const [rankingRows, setRankingRows] = useState<any[]>([]);
+const [rankingLoading, setRankingLoading] = useState(false);
+
   
   const [exerciseInput, setExerciseInput] = useState('');
   const [restTimer, setRestTimer] = useState<number | null>(null);
@@ -393,6 +414,24 @@ const [weightNote, setWeightNote] = useState('');
 
   
   useEffect(() => {
+    if (activeTab !== 'rankings') return;
+  
+    (async () => {
+      setRankingLoading(true);
+      try {
+        const rows = await fetchExerciseRanking(rankingExercise, 20);
+        setRankingRows(rows);
+      } catch (e) {
+        console.error("Erro a carregar ranking", e);
+        setRankingRows([]);
+      } finally {
+        setRankingLoading(false);
+      }
+    })();
+  }, [activeTab, rankingExercise]);
+  
+  
+  useEffect(() => {
     const unsub = onAuthStateChanged(auth!, (u) => {
       setUid(u?.uid ?? null);
       setAuthReady(true);
@@ -407,6 +446,10 @@ const [weightNote, setWeightNote] = useState('');
     (async () => {
       try {
         // carrega tudo do Firestore do utilizador
+        const prof = await getOrCreateUserProfile(uid, auth?.currentUser?.email ?? null);
+setDisplayName(prof.displayName);
+setNameInput(prof.displayName);
+
         const [sess, stats, wts, tpls] = await Promise.all([
           loadUserCollection<Session>(uid, "sessions"),
           loadUserCollection<{ id: string } & any>(uid, "exerciseStats"),
@@ -1564,6 +1607,29 @@ const TABS: Array<{ id: TabId; icon: string }> = [
               </div>
             </div>
           </button>
+          <button
+  onClick={() => setActiveTab('rankings')}
+  className="w-full rounded-[2.1rem] mt-4 bg-white/5 border border-white/10 px-5 py-4 text-left active:scale-95 transition-all"
+>
+  <div className="flex items-center justify-between">
+    <div>
+      <div className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-300">
+        Rankings
+      </div>
+      <div className="mt-1 text-white font-black italic uppercase tracking-tighter text-lg">
+        Top PRs
+      </div>
+      <div className="mt-1 text-slate-300 text-xs font-bold uppercase tracking-widest">
+        Supino • Agachamento • Terra
+      </div>
+    </div>
+
+    <div className="h-12 w-12 rounded-2xl bg-white/10 border border-white/10 text-white flex items-center justify-center">
+      🏆
+    </div>
+  </div>
+</button>
+
         </div>
       )}
 
@@ -2840,6 +2906,82 @@ const TABS: Array<{ id: TabId; icon: string }> = [
   </div>
 )}
 
+{activeTab === 'rankings' && (
+  <div className="p-6 animate-in pb-36">
+    <div className="flex items-center justify-between gap-4 mb-8 pt-2">
+      <div className="flex items-center gap-4 min-w-0">
+        <BrandMark sizePx={HEADER_LOGO_PX} />
+        <div className="min-w-0">
+          <div className="text-[10px] font-black uppercase tracking-[0.38em] text-slate-300">
+            {BRAND_NAME}
+          </div>
+          <h2
+            className="text-[28px] font-black italic uppercase tracking-[-0.04em] leading-none mt-1 text-white"
+            style={{ fontFamily: 'var(--font-grotesk), var(--font-inter), system-ui' }}
+          >
+            Rankings
+          </h2>
+          <div className="text-[10px] font-black uppercase tracking-[0.26em] text-slate-300 mt-2">
+            Top PRs
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={() => setActiveTab('home')}
+        className="btn-soft px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 shrink-0"
+      >
+        Home
+      </button>
+    </div>
+
+    <div className="card-premium rounded-[2.5rem] p-6">
+      <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
+        Exercício
+      </div>
+
+      <select
+        value={rankingExercise}
+        onChange={(e) => setRankingExercise(e.target.value)}
+        className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-4 ring-emerald-300/20 text-white"
+      >
+        <option value="bench_press">Supino (Bench Press)</option>
+        <option value="squat">Agachamento (Squat)</option>
+        <option value="deadlift">Terra (Deadlift)</option>
+      </select>
+
+      <div className="mt-5 space-y-3">
+        {rankingLoading ? (
+          <div className="text-slate-300 text-xs font-bold">A carregar...</div>
+        ) : rankingRows.length === 0 ? (
+          <div className="text-slate-300 text-xs font-bold">Sem dados ainda.</div>
+        ) : (
+          rankingRows.map((r: any, i: number) => (
+            <div
+              key={`${r.uid}-${i}`}
+              className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between"
+            >
+              <div className="min-w-0">
+                <div className="text-white font-black italic truncate">
+                  {i + 1}. {r.displayName}
+                </div>
+                <div className="text-[10px] text-slate-300 font-mono uppercase mt-1">
+                  {typeof r.bestWeight === "number" ? `${r.bestWeight} kg` : "--"}
+                  {typeof r.bestReps === "number" ? ` × ${r.bestReps}` : ""}
+                </div>
+              </div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-emerald-300">
+                PR
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
+
 {activeTab === 'profile' && (
   <div className="p-6 animate-in pb-36">
     <div className="flex items-center justify-between gap-4 mb-8 pt-2">
@@ -2877,6 +3019,44 @@ const TABS: Array<{ id: TabId; icon: string }> = [
       <div className="mt-3 text-white font-black italic text-lg">
         {auth?.currentUser?.email ?? '—'}
       </div>
+
+      <div className="mt-6">
+  <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
+    Nome no ranking
+  </div>
+
+  <input
+    value={nameInput}
+    onChange={(e) => setNameInput(e.target.value)}
+    placeholder="Ex.: Hugo Barros"
+    className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-4 ring-emerald-300/20 text-white placeholder:text-slate-500"
+  />
+
+  <button
+    disabled={savingName || !uid}
+    onClick={async () => {
+      if (!uid) return;
+      const v = nameInput.trim().replace(/\s+/g, " ");
+      if (!v) return;
+
+      setSavingName(true);
+      try {
+        await updateUserDisplayName(uid, v);
+        setDisplayName(v);
+
+        setToastText("Nome guardado");
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 1600);
+      } finally {
+        setSavingName(false);
+      }
+    }}
+    className="mt-3 w-full btn-primary px-4 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 disabled:opacity-60"
+  >
+    {savingName ? "A guardar..." : "Guardar nome"}
+  </button>
+</div>
+
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
