@@ -1183,12 +1183,10 @@ saveCachedSessions(merged);
     
   
     // ✅ Fecha o treino e confirma ao utilizador imediatamente
-    setToastText("Treino guardado");
-    setShowSuccessToast(true);
-    setTimeout(() => setShowSuccessToast(false), 1600);
-  
-    setCurrentSession(null);
-    setActiveTab("calendar");
+    setToastText("A guardar na cloud…");
+setShowSuccessToast(true);
+setTimeout(() => setShowSuccessToast(false), 1600);
+
   
     try {
       if (!uid) return;
@@ -1204,7 +1202,8 @@ saveCachedSessions(merged);
   
       for (const ex of sessionToSave.exercises) {
         const normalized = ex.exerciseId || normalizeName(ex.name);
-        const display = ex.name.trim();
+        const display = (EXERCISE_ALIASES.find(a => a.canonical === normalized)?.display) ?? ex.name.trim();
+
   
         const completedSets = ex.sets.filter((s) => s.completed);
         const candidateLast =
@@ -1298,16 +1297,24 @@ saveCachedSessions(merged);
         }
         return [nextTemplate, ...prev];
       });
-      console.error("saveWorkout firestore error:", e?.message ?? e, e);
+      
 
       await upsertUserDoc(uid, "templates", nextTemplate);
+      setToastText("Treino guardado");
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 1600);
+      
+      setCurrentSession(null);
+      setActiveTab("calendar");
+      
     } catch (e) {
       console.error("saveWorkout firestore error:", e);
   
       // ✅ Se falhar cloud, informa (mas a sessão local já foi fechada)
-      setToastText("Guardado (offline). A sincronizar…");
-      setShowSuccessToast(true);
-      setTimeout(() => setShowSuccessToast(false), 2200);
+      setToastText("Erro a guardar na cloud. Tenta outra vez.");
+setShowSuccessToast(true);
+setTimeout(() => setShowSuccessToast(false), 2200);
+
     }
   };
   
