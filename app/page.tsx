@@ -34,7 +34,9 @@ type Session = {
   exercises: SessionExercise[];
   durationSeconds?: number;
   addons?: { abs?: boolean; cardio?: boolean; notes?: string };
+  fromTemplateId?: string | null; // ✅ NOVO
 };
+
 
 type ExerciseStats = {
   normalizedName: string;
@@ -97,12 +99,62 @@ const normalizeName = (raw: string) => {
 };
 
 const EXERCISE_ALIASES: Array<{ canonical: string; aliases: string[]; display: string }> = [
-  { canonical: 'bench_press', display: 'Supino', aliases: ['supino', 'bench press', 'benchpress', 'chest press', 'press de peito'] },
-  { canonical: 'squat', display: 'Agachamento', aliases: ['agachamento', 'squat', 'back squat', 'front squat'] },
-  { canonical: 'deadlift', display: 'Levantamento Terra', aliases: ['levantamento terra', 'terra', 'deadlift'] },
-  { canonical: 'row', display: 'Remada', aliases: ['remada', 'row', 'barbell row', 'dumbbell row'] },
-  { canonical: 'pull_up', display: 'Barra', aliases: ['barra', 'pull up', 'pull-up', 'chin up', 'chin-up'] },
+  {
+    canonical: 'bench_press',
+    display: 'Supino',
+    aliases: [
+      'supino', 'supino reto', 'supino plano', 'supino barra', 'supino com barra',
+      'press banca', 'press de banca', 'press banco', 'press de peito', 'press peito',
+      'bench press', 'benchpress', 'barbell bench press', 'flat bench press',
+      'chest press', 'barbell chest press',
+      'developpe couche', 'développé couché', // FR (variações)
+      'press de banca plano',
+    ],
+  },
+  {
+    canonical: 'squat',
+    display: 'Agachamento',
+    aliases: [
+      'agachamento', 'agachamento livre', 'agachamento barra', 'agachamento com barra',
+      'back squat', 'high bar squat', 'low bar squat',
+      'front squat', 'goblet squat', 'air squat',
+      'sentadilla', // ES
+      'squat',
+    ],
+  },
+  {
+    canonical: 'deadlift',
+    display: 'Levantamento Terra',
+    aliases: [
+      'levantamento terra', 'terra', 'peso morto', // PT (muita gente diz)
+      'deadlift', 'conventional deadlift', 'romanian deadlift', 'rdl',
+      'stiff', 'stiff leg deadlift', 'stiff-leg deadlift',
+      'peso muerto', // ES
+    ],
+  },
+  {
+    canonical: 'row',
+    display: 'Remada',
+    aliases: [
+      'remada', 'remada barra', 'remada com barra', 'remada curvada',
+      'barbell row', 'bent over row', 'bent-over row',
+      'dumbbell row', 'one arm row', 'one-arm row',
+      'row',
+    ],
+  },
+  {
+    canonical: 'pull_up',
+    display: 'Barra',
+    aliases: [
+      'barra', 'barras', 'elevação na barra',
+      'pull up', 'pull-up', 'pullup',
+      'chin up', 'chin-up', 'chinup',
+      'tractions', // FR
+      'dominada', 'dominadas', // ES
+    ],
+  },
 ];
+
 
 const canonicalizeExercise = (raw: string) => {
   const n = normalizeName(raw);
@@ -819,11 +871,13 @@ setNameInput(prof.displayName);
 
     setCurrentSession({
       id: crypto.randomUUID(),
-      name: `SESSÃO ${new Date().getHours() < 12 ? 'MATINAL' : 'TARDE'}`,
-      startedAt: new Date().toISOString(),
-      exercises: [],
+      name: tpl.displayName,
+      startedAt: now,
+      exercises,
       addons: { abs: false, cardio: false, notes: '' },
+      fromTemplateId: tpl.id, // ✅ NOVO
     });
+    
     setActiveTab('train');
   };
 
@@ -855,11 +909,13 @@ setNameInput(prof.displayName);
 
     setCurrentSession({
       id: crypto.randomUUID(),
-      name: tpl.displayName,
-      startedAt: now,
-      exercises,
+      name: `SESSÃO ${new Date().getHours() < 12 ? 'MATINAL' : 'TARDE'}`,
+      startedAt: new Date().toISOString(),
+      exercises: [],
       addons: { abs: false, cardio: false, notes: '' },
+      fromTemplateId: null, // ✅ NOVO
     });
+    
 
     setActiveTab('train');
   };
@@ -901,9 +957,11 @@ setNameInput(prof.displayName);
     const nextStats: Record<string, ExerciseStats> = { ...exerciseStats };
   
     for (const ex of sessionToSave.exercises) {
-      const normalized = ex.exerciseId || normalizeName(ex.name);
+      const normalized = ex.exerciseId || canonicalizeExercise(ex.name).canonicalId || normalizeName(ex.name);
 
-      const display = ex.name.trim();
+
+      const display = canonicalizeExercise(ex.name).displayName || ex.name.trim();
+
   
       const completedSets = ex.sets.filter((s) => s.completed);
       const candidateLast =
@@ -965,6 +1023,18 @@ setNameInput(prof.displayName);
   
     setExerciseStats(nextStats);
   
+    // ✅ Se a sessão veio de um template, NÃO alteramos templates automaticamente
+if (sessionToSave.fromTemplateId) {
+  setToastText('Treino guardado');
+  setShowSuccessToast(true);
+  setTimeout(() => setShowSuccessToast(false), 1600);
+
+  setCurrentSession(null);
+  setActiveTab('calendar');
+  return;
+}
+
+    
     // ✅ AUTO-TEMPLATE (gravar no firestore também)
     const tplNormalized = normalizeName(sessionToSave.name);
     const tplExercises: TemplateExercise[] = sessionToSave.exercises.map((ex) => {
