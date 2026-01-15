@@ -36,7 +36,8 @@ export async function getOrCreateUserProfile(uid: string, email?: string | null)
     updatedAt: now,
   };
 
-  await setDoc(ref, profile, { merge: true });
+  await setDoc(ref, profile, { merge: true }); // aqui está OK porque usas null e não undefined
+
   return profile;
 }
 
