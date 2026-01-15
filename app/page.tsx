@@ -447,6 +447,27 @@ const formatDuration = (seconds: number) => {
   return hh > 0 ? `${pad(hh)}:${pad(mm)}:${pad(ss)}` : `${pad(mm)}:${pad(ss)}`;
 };
 
+const LS_SESSIONS_KEY = "overload_sessions_cache_v1";
+
+function loadCachedSessions(): Session[] {
+  try {
+    const raw = localStorage.getItem(LS_SESSIONS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCachedSessions(sessions: Session[]) {
+  try {
+    // guarda só as últimas 60 para não crescer infinito
+    localStorage.setItem(LS_SESSIONS_KEY, JSON.stringify(sessions.slice(0, 60)));
+  } catch {}
+}
+
+
 // --- COLAR ESTA FUNÇÃO DE IMAGENS LOGO ABAIXO DO LOGO ---
 const getExerciseImage = (name: string) => {
   const n = name?.toLowerCase() || '';
@@ -720,7 +741,20 @@ const [weightNote, setWeightNote] = useState('');
         // weights oldest-first (como tinhas no memo)
         wts.sort((a, b) => new Date(a.dateIso).getTime() - new Date(b.dateIso).getTime());
   
-        setSessions(sess);
+        const cached = loadCachedSessions();
+
+// merge por id (Firestore tem prioridade)
+const map = new Map<string, Session>();
+for (const s of cached) map.set(s.id, s);
+for (const s of sess) map.set(s.id, s);
+
+const merged = Array.from(map.values()).sort(
+  (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+);
+
+setSessions(merged);
+saveCachedSessions(merged);
+
         setExerciseStats(
           // caso o teu exerciseStats seja Record<string, ExerciseStats>,
           // guarda cada stat como doc com id = normalizedName (ver nota abaixo)
@@ -1141,7 +1175,12 @@ const [weightNote, setWeightNote] = useState('');
     };
   
     // ✅ Atualiza UI logo (mesmo se a cloud falhar)
-    setSessions((prev) => [sessionToSave, ...prev]);
+    setSessions((prev) => {
+      const next = [sessionToSave, ...prev];
+      saveCachedSessions(next);
+      return next;
+    });
+    
   
     // ✅ Fecha o treino e confirma ao utilizador imediatamente
     setToastText("Treino guardado");
@@ -1155,6 +1194,7 @@ const [weightNote, setWeightNote] = useState('');
       if (!uid) return;
   
       // 1) guarda a sessão
+      console.log("Saving session to Firestore:", uid, sessionToSave.id);
       await upsertUserDoc(uid, "sessions", sessionToSave);
   
       // 2) calcula stats localmente
@@ -1258,7 +1298,8 @@ const [weightNote, setWeightNote] = useState('');
         }
         return [nextTemplate, ...prev];
       });
-  
+      console.error("saveWorkout firestore error:", e?.message ?? e, e);
+
       await upsertUserDoc(uid, "templates", nextTemplate);
     } catch (e) {
       console.error("saveWorkout firestore error:", e);
