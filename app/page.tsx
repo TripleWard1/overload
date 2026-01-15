@@ -868,18 +868,19 @@ setNameInput(prof.displayName);
     setAddonCardio(false);
     setAddonNotes('');
     setTrainShowAddExercise(true);
-
+  
     setCurrentSession({
       id: crypto.randomUUID(),
-      name: tpl.displayName,
-      startedAt: now,
-      exercises,
+      name: `SESSÃO ${new Date().getHours() < 12 ? 'MATINAL' : 'TARDE'}`,
+      startedAt: new Date().toISOString(),
+      exercises: [],
       addons: { abs: false, cardio: false, notes: '' },
-      fromTemplateId: tpl.id, // ✅ NOVO
+      fromTemplateId: null, // ✅ sessão livre
     });
-    
+  
     setActiveTab('train');
   };
+  
 
   const startFromTemplate = (tpl: WorkoutTemplate) => {
     const now = new Date().toISOString();
@@ -909,12 +910,13 @@ setNameInput(prof.displayName);
 
     setCurrentSession({
       id: crypto.randomUUID(),
-      name: `SESSÃO ${new Date().getHours() < 12 ? 'MATINAL' : 'TARDE'}`,
-      startedAt: new Date().toISOString(),
-      exercises: [],
+      name: tpl.displayName,
+      startedAt: now,
+      exercises, // ✅ usa os exercícios do template
       addons: { abs: false, cardio: false, notes: '' },
-      fromTemplateId: null, // ✅ NOVO
+      fromTemplateId: tpl.id, // ✅ veio de template
     });
+
     
 
     setActiveTab('train');
@@ -2238,7 +2240,8 @@ const TABS: Array<{ id: TabId; icon: string }> = [
           <div className="p-4 space-y-6 pb-44">
             {currentSession.exercises.map((ex, exIdx) => {
               const thumb = pickImageFor(ex.name);
-              const perf = exerciseStats[normalizeName(ex.name)];
+              const perf = exerciseStats[ex.exerciseId];
+
 
               return (
                 <div
