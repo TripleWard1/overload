@@ -8,6 +8,9 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { loadUserCollection, upsertUserDoc, deleteUserDoc } from "@/lib/db";
 import { useRouter } from "next/navigation";
+import { getOrCreateUserProfile, updateUserDisplayName } from "@/lib/profile";
+import { fetchExerciseRanking } from "@/lib/rankings";
+
 
 
 /* -------------------- FONTS (premium) -------------------- */
@@ -95,12 +98,174 @@ const normalizeName = (raw: string) => {
 };
 
 const EXERCISE_ALIASES: Array<{ canonical: string; aliases: string[]; display: string }> = [
-  { canonical: 'bench_press', display: 'Supino', aliases: ['supino', 'bench press', 'benchpress', 'chest press', 'press de peito'] },
-  { canonical: 'squat', display: 'Agachamento', aliases: ['agachamento', 'squat', 'back squat', 'front squat'] },
-  { canonical: 'deadlift', display: 'Levantamento Terra', aliases: ['levantamento terra', 'terra', 'deadlift'] },
-  { canonical: 'row', display: 'Remada', aliases: ['remada', 'row', 'barbell row', 'dumbbell row'] },
-  { canonical: 'pull_up', display: 'Barra', aliases: ['barra', 'pull up', 'pull-up', 'chin up', 'chin-up'] },
+  // --- PEITO / SUPINO ---
+  {
+    canonical: "bench_press",
+    display: "Supino",
+    aliases: [
+      "supino", "supino reto", "supino plano", "supino barra", "supino com barra",
+      "bench press", "flat bench", "barbell bench", "chest press", "press de peito",
+      "bench", "bp", "supino powerlifting",
+      "desenvolvimento horizontal", "press horizontal",
+      "machine chest press", "pec press (errado mas comum)", "press peito",
+    ],
+  },
+  {
+    canonical: "incline_bench_press",
+    display: "Supino Inclinado",
+    aliases: [
+      "supino inclinado", "incline bench", "incline bench press", "inclined bench press",
+      "supino inclinado barra", "supino inclinado halteres", "incline dumbbell press",
+      "press inclinado", "press peito inclinado",
+    ],
+  },
+  {
+    canonical: "dips",
+    display: "Paralelas",
+    aliases: [
+      "paralelas", "dips", "chest dips", "triceps dips", "fundos", "fundos nas paralelas",
+    ],
+  },
+
+  // --- AGACHAMENTO / PERNAS ---
+  {
+    canonical: "squat",
+    display: "Agachamento",
+    aliases: [
+      "agachamento", "agachamento livre", "agachamento barra", "back squat",
+      "squat", "barbell squat", "high bar squat", "low bar squat",
+      "agachamento powerlifting", "deep squat", "full squat",
+    ],
+  },
+  {
+    canonical: "front_squat",
+    display: "Agachamento Frontal",
+    aliases: ["agachamento frontal", "front squat", "fs"],
+  },
+  {
+    canonical: "leg_press",
+    display: "Leg Press",
+    aliases: [
+      "leg press", "prensa", "prensa de pernas", "45 leg press", "pressa", "legpress",
+    ],
+  },
+  {
+    canonical: "lunges",
+    display: "Lunges",
+    aliases: [
+      "lunge", "lunges", "passada", "passadas", "afundos", "walking lunge",
+      "split squat (muito usado)", "bulgarian split squat (variante)",
+    ],
+  },
+
+  // --- TERRA / POSTERIOR ---
+  {
+    canonical: "deadlift",
+    display: "Levantamento Terra",
+    aliases: [
+      "levantamento terra", "terra", "deadlift", "dl",
+      "conventional deadlift", "sumo deadlift", "sumo",
+      "levantamento do chão", "peso morto (muito comum)",
+    ],
+  },
+  {
+    canonical: "romanian_deadlift",
+    display: "RDL",
+    aliases: [
+      "rdl", "romanian deadlift", "levantamento terra romeno", "terra romeno",
+      "stiff", "stiff leg deadlift", "peso morto romeno",
+    ],
+  },
+  {
+    canonical: "hip_thrust",
+    display: "Hip Thrust",
+    aliases: [
+      "hip thrust", "elevação pélvica", "glute bridge (muito usado)", "ponte de glúteos",
+    ],
+  },
+
+  // --- COSTAS / REMADAS / PUXADAS ---
+  {
+    canonical: "row",
+    display: "Remada",
+    aliases: [
+      "remada", "remada barra", "barbell row", "row", "bent over row",
+      "remada curvada", "seal row", "dumbbell row", "one arm row", "remada halter",
+    ],
+  },
+  {
+    canonical: "pull_up",
+    display: "Barra",
+    aliases: [
+      "barra", "pull up", "pull-up", "chin up", "chin-up",
+      "tractions", "elevações", "elevação na barra", "barfiks (estrangeiro)",
+    ],
+  },
+  {
+    canonical: "lat_pulldown",
+    display: "Puxada na Polia",
+    aliases: [
+      "lat pulldown", "pulldown", "puxada", "puxada na polia", "puxada frontal",
+      "pull down", "high pulley", "puxada aberta", "puxada fechada",
+    ],
+  },
+
+  // --- OMBROS ---
+  {
+    canonical: "overhead_press",
+    display: "OHP",
+    aliases: [
+      "ohp", "overhead press", "military press", "desenvolvimento militar",
+      "press militar", "shoulder press barra", "press acima da cabeça",
+    ],
+  },
+  {
+    canonical: "dumbbell_shoulder_press",
+    display: "Shoulder Press Halteres",
+    aliases: [
+      "shoulder press", "dumbbell shoulder press", "press ombro halteres",
+      "desenvolvimento halteres",
+    ],
+  },
+  {
+    canonical: "lateral_raise",
+    display: "Elevação Lateral",
+    aliases: [
+      "elevação lateral", "lateral raise", "side raise", "deltoid raise",
+      "elevacao lateral", "elevação de ombro lateral",
+    ],
+  },
+
+  // --- BRAÇOS ---
+  {
+    canonical: "biceps_curl",
+    display: "Rosca Bíceps",
+    aliases: [
+      "rosca", "rosca biceps", "rosca bíceps", "biceps curl", "curl",
+      "rosca direta", "barbell curl", "dumbbell curl", "hammer curl", "rosca martelo",
+    ],
+  },
+  {
+    canonical: "triceps_extension",
+    display: "Tríceps",
+    aliases: [
+      "triceps", "tríceps", "tricep extension", "triceps extension",
+      "pushdown", "triceps pushdown", "puxada tríceps", "corda tríceps",
+      "skullcrusher", "testa", "extensão tríceps",
+    ],
+  },
+
+  // --- ABS ---
+  {
+    canonical: "abs",
+    display: "Abdominais",
+    aliases: [
+      "abs", "abdominais", "core", "crunch", "crunches", "sit up", "sit-up",
+      "leg raises", "elevação de pernas", "prancha", "plank",
+    ],
+  },
 ];
+
 
 const canonicalizeExercise = (raw: string) => {
   const n = normalizeName(raw);
@@ -322,8 +487,130 @@ const getExerciseImage = (name: string) => {
 /* -------------------- APP -------------------- */
 type TabId = 'home' | 'train' | 'history' | 'calendar' | 'templates' | 'peso' | 'profile';
 
+
+function RankingsView({ onBack }: { onBack: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [bench, setBench] = useState<any[]>([]);
+  const [squat, setSquat] = useState<any[]>([]);
+  const [deadlift, setDeadlift] = useState<any[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      try {
+        setLoading(true);
+        const [b, s, d] = await Promise.all([
+          fetchExerciseRanking("bench_press", 20),
+          fetchExerciseRanking("squat", 20),
+          fetchExerciseRanking("deadlift", 20),
+        ]);
+        if (!alive) return;
+        setBench(b);
+        setSquat(s);
+        setDeadlift(d);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const Block = ({ title, rows }: { title: string; rows: any[] }) => (
+    <div className="card-premium rounded-[2.25rem] p-6">
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-300">
+          Ranking
+        </div>
+        <div className="text-[12px] font-black italic uppercase text-white">
+          {title}
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {rows.length === 0 ? (
+          <div className="text-slate-300 text-xs font-bold">
+            Ainda sem registos.
+          </div>
+        ) : (
+          rows.map((r, idx) => (
+            <div
+              key={r.uid + idx}
+              className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-4 py-3"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center text-[10px] font-black">
+                  {idx + 1}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-white font-black text-sm truncate">
+                    {r.displayName}
+                  </div>
+                  <div className="text-[10px] text-slate-300 font-mono uppercase">
+                    {typeof r.bestReps === "number" ? `× ${r.bestReps}` : ""}
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-white font-black italic">
+                {typeof r.bestWeight === "number" ? `${r.bestWeight}kg` : "—"}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="p-6 animate-in pb-36 space-y-5">
+      <div className="flex items-center justify-between gap-3 pt-2">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.38em] text-slate-300">
+            OVERLOAD
+          </div>
+          <h2 className="text-[28px] font-black italic uppercase tracking-[-0.04em] leading-none text-white">
+            Rankings
+          </h2>
+          <div className="text-[10px] font-black uppercase tracking-[0.26em] text-slate-300 mt-2">
+            PRs globais
+          </div>
+        </div>
+
+        <button
+          onClick={onBack}
+          className="btn-soft px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95"
+        >
+          Home
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="card-premium rounded-[2.25rem] p-6 text-slate-300 text-xs font-bold">
+          A carregar rankings...
+        </div>
+      ) : (
+        <>
+          <Block title="Supino" rows={bench} />
+          <Block title="Agachamento" rows={squat} />
+          <Block title="Levantamento Terra" rows={deadlift} />
+        </>
+      )}
+    </div>
+  );
+}
+
+
 export default function GymApp() {
   
+const [displayName, setDisplayName] = useState<string>("—");
+const [displayNameDraft, setDisplayNameDraft] = useState<string>("");
+const [showRankings, setShowRankings] = useState(false);
+
+
 
 const [activeTab, setActiveTab] = useState<TabId>('home');
 
@@ -393,13 +680,24 @@ const [weightNote, setWeightNote] = useState('');
 
   
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth!, (u) => {
+    const unsub = onAuthStateChanged(auth!, async (u) => {
       setUid(u?.uid ?? null);
       setAuthReady(true);
-      if (!u) router.replace("/landing");
+  
+      if (!u) {
+        router.replace("/landing");
+        return;
+      }
+  
+      // ✅ garante perfil e nome
+      const p = await getOrCreateUserProfile(u.uid, u.email);
+      setDisplayName(p.displayName);
+      setDisplayNameDraft(p.displayName);
     });
+  
     return () => unsub();
   }, [router]);
+  
 
   useEffect(() => {
     if (!uid) return;
@@ -971,7 +1269,8 @@ const [weightNote, setWeightNote] = useState('');
     const nextSession = { ...currentSession, exercises };
 
     if (data.completed === true) {
-      const exNorm = normalizeName(ex.name);
+      const exNorm = ex.exerciseId || normalizeName(ex.name);
+
       const tpl = templates.find(
         (t) => normalizeName(t.displayName) === normalizeName(nextSession.name)
       );
@@ -2814,6 +3113,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
 )}
 
 {activeTab === 'profile' && (
+  
   <div className="p-6 animate-in pb-36">
     <div className="flex items-center justify-between gap-4 mb-8 pt-2">
       <div className="flex items-center gap-4 min-w-0">
@@ -2842,6 +3142,29 @@ const TABS: Array<{ id: TabId; icon: string }> = [
       </button>
     </div>
 
+    <button
+  onClick={() => setShowRankings(true)}
+  className="w-full rounded-[2.75rem] p-[2px] bg-[linear-gradient(90deg,#22c55e,#a3e635)] shadow-[0_30px_110px_rgba(34,197,94,0.18)] active:scale-95 transition-all"
+>
+  <div className="rounded-[2.65rem] bg-[#070B14]/85 backdrop-blur-xl p-7 flex justify-between items-center border border-white/10">
+    <div className="text-left">
+      <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
+        Rankings
+      </div>
+      <div className="text-2xl font-black italic uppercase leading-none mt-2 text-white">
+        Ver PRs globais
+      </div>
+      <div className="text-slate-300 text-xs font-bold uppercase tracking-widest mt-2">
+        Supino • Agachamento • Terra
+      </div>
+    </div>
+    <div className="h-12 w-12 rounded-2xl bg-white/10 border border-white/10 text-white flex items-center justify-center shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+      🏆
+    </div>
+  </div>
+</button>
+
+
     <div className="card-premium rounded-[2.5rem] p-6">
       <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
         Sessão
@@ -2850,6 +3173,39 @@ const TABS: Array<{ id: TabId; icon: string }> = [
       <div className="mt-3 text-white font-black italic text-lg">
         {auth?.currentUser?.email ?? '—'}
       </div>
+
+      <div className="mt-2 text-slate-300 text-xs font-bold">
+  Nome: <span className="text-white font-black">{displayName}</span>
+</div>
+
+
+      <div className="mt-4 bg-white/5 border border-white/10 rounded-2xl p-4">
+  <div className="text-[9px] font-black uppercase tracking-widest text-slate-300">
+    Nome público (Rankings)
+  </div>
+
+  <input
+    value={displayNameDraft}
+    onChange={(e) => setDisplayNameDraft(e.target.value)}
+    placeholder="O teu nome (ex: Hugo Barros)"
+    className="mt-2 w-full bg-transparent outline-none font-black text-white"
+  />
+
+  <button
+    onClick={async () => {
+      if (!uid) return;
+      const v = displayNameDraft.trim();
+      if (!v) return;
+      await updateUserDisplayName(uid, v);
+      setDisplayName(v);
+      setDisplayNameDraft(v);
+    }}
+    className="mt-3 w-full btn-primary px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95"
+  >
+    Guardar nome
+  </button>
+</div>
+
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
@@ -2875,6 +3231,28 @@ const TABS: Array<{ id: TabId; icon: string }> = [
   </div>
 )}
 
+{showRankings && (
+  <div className="fixed inset-0 z-[260] modal-overlay p-4">
+    <div className="max-w-md mx-auto mt-6 modal-panel rounded-[2.75rem] overflow-hidden">
+      <div className="p-4 border-b border-white/10 flex items-center justify-between">
+        <div className="text-white font-black italic uppercase tracking-tighter">
+          Rankings
+        </div>
+        <button
+          onClick={() => setShowRankings(false)}
+          className="btn-soft px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95"
+        >
+          Fechar
+        </button>
+      </div>
+
+      <div className="p-0">
+        {/* Reutiliza o teu componente */}
+        <RankingsView onBack={() => setShowRankings(false)} />
+      </div>
+    </div>
+  </div>
+)}
 
       {/* NAV */}
       <nav
