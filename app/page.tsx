@@ -1122,6 +1122,10 @@ const [weightNote, setWeightNote] = useState('');
   const saveWorkout = async () => {
     if (!currentSession) return;
   
+    // ✅ bloqueia duplo clique
+    // (opcional mas recomendado)
+    // if (saving) return;
+  
     const endedAt = new Date().toISOString();
     const durationSeconds = computeDurationSeconds(currentSession.startedAt, endedAt);
   
@@ -1136,127 +1140,138 @@ const [weightNote, setWeightNote] = useState('');
       },
     };
   
-    const updated = [sessionToSave, ...sessions];
-    setSessions(updated);
+    // ✅ Atualiza UI logo (mesmo se a cloud falhar)
+    setSessions((prev) => [sessionToSave, ...prev]);
   
-    if (uid) {
-      await upsertUserDoc(uid, "sessions", sessionToSave);
-    }
-  
-    // update stats
-    const nextStats: Record<string, ExerciseStats> = { ...exerciseStats };
-  
-    for (const ex of sessionToSave.exercises) {
-      const normalized = ex.exerciseId || normalizeName(ex.name);
-
-      const display = ex.name.trim();
-  
-      const completedSets = ex.sets.filter((s) => s.completed);
-      const candidateLast =
-        [...completedSets].reverse().find((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0) ??
-        [...ex.sets].reverse().find((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
-  
-      const lastWeight = candidateLast?.weightKg;
-      const lastReps = candidateLast?.reps;
-  
-      const validSets = ex.sets
-        .filter((s) => s.completed)
-        .filter((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
-  
-      const fallbackSets = ex.sets.filter((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
-      const allSets = validSets.length ? validSets : fallbackSets;
-  
-      const best = allSets.reduce<{ w?: number; r?: number }>(
-        (acc, s) => {
-          const w = s.weightKg || 0;
-          const r = s.reps || 0;
-          const accW = acc.w ?? -1;
-          const accR = acc.r ?? -1;
-          if (w > accW) return { w, r };
-          if (w === accW && r > accR) return { w, r };
-          return acc;
-        },
-        {
-          w: nextStats[normalized]?.bestWeight,
-          r: nextStats[normalized]?.bestReps,
-        }
-      );
-  
-      const prev = nextStats[normalized];
-      nextStats[normalized] = {
-        normalizedName: normalized,
-        displayName: prev?.displayName ?? display,
-        lastDate: endedAt,
-        lastWeight: typeof lastWeight === 'number' ? lastWeight : prev?.lastWeight,
-        lastReps: typeof lastReps === 'number' ? lastReps : prev?.lastReps,
-        bestWeight: typeof best.w === 'number' ? best.w : prev?.bestWeight,
-        bestReps: typeof best.r === 'number' ? best.r : prev?.bestReps,
-        usageCount: (prev?.usageCount ?? 0) + 1,
-      };
-  
-      // ✅ GRAVAR STAT POR EXERCÍCIO (doc id = normalized)
-      if (uid) {
-        await upsertUserDoc(uid, "exerciseStats", { id: normalized, ...nextStats[normalized] } as any);
-      }
-    }
-  
-    setExerciseStats(nextStats);
-  
-    // ✅ AUTO-TEMPLATE (gravar no firestore também)
-    const tplNormalized = normalizeName(sessionToSave.name);
-    const tplExercises: TemplateExercise[] = sessionToSave.exercises.map((ex) => {
-      const n = normalizeName(ex.name);
-      const displayName = ex.name.trim();
-      const targetSets = Math.max(1, ex.sets.length);
-      const repsValues = ex.sets.map((s) => s.reps).filter((v) => typeof v === 'number');
-  
-      const freq = repsValues.reduce<Record<number, number>>((m, v) => {
-        m[v] = (m[v] || 0) + 1;
-        return m;
-      }, {});
-  
-      const mode = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0];
-      const targetReps =
-        typeof mode !== 'undefined'
-          ? Number(mode)
-          : repsValues.reverse().find((v) => v > 0) ?? undefined;
-  
-      return { normalizedName: n, displayName, targetSets, targetReps };
-    });
-  
-    const nextTemplate: WorkoutTemplate = {
-      id: crypto.randomUUID(),
-      normalizedName: tplNormalized,
-      displayName: sessionToSave.name,
-      updatedAt: endedAt,
-      exercises: tplExercises,
-    };
-  
-    setTemplates((prev) => {
-      const existingIdx = prev.findIndex((t) => t.normalizedName === tplNormalized);
-      if (existingIdx >= 0) {
-        const copy = [...prev];
-        nextTemplate.id = copy[existingIdx].id; // mantém id se já existe
-        copy[existingIdx] = nextTemplate;
-        return copy;
-      }
-      return [nextTemplate, ...prev];
-    });
-  
-    if (uid) {
-      await upsertUserDoc(uid, "templates", nextTemplate);
-    }
-  
-    setToastText('Treino guardado');
+    // ✅ Fecha o treino e confirma ao utilizador imediatamente
+    setToastText("Treino guardado");
     setShowSuccessToast(true);
     setTimeout(() => setShowSuccessToast(false), 1600);
   
     setCurrentSession(null);
-    setActiveTab('calendar');
+    setActiveTab("calendar");
+  
+    try {
+      if (!uid) return;
+  
+      // 1) guarda a sessão
+      await upsertUserDoc(uid, "sessions", sessionToSave);
+  
+      // 2) calcula stats localmente
+      const nextStats: Record<string, ExerciseStats> = { ...exerciseStats };
+  
+      const statWrites: Promise<any>[] = [];
+  
+      for (const ex of sessionToSave.exercises) {
+        const normalized = ex.exerciseId || normalizeName(ex.name);
+        const display = ex.name.trim();
+  
+        const completedSets = ex.sets.filter((s) => s.completed);
+        const candidateLast =
+          [...completedSets].reverse().find((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0) ??
+          [...ex.sets].reverse().find((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
+  
+        const lastWeight = candidateLast?.weightKg;
+        const lastReps = candidateLast?.reps;
+  
+        const validSets = ex.sets
+          .filter((s) => s.completed)
+          .filter((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
+  
+        const fallbackSets = ex.sets.filter((s) => (s.weightKg || 0) > 0 && (s.reps || 0) > 0);
+        const allSets = validSets.length ? validSets : fallbackSets;
+  
+        const best = allSets.reduce<{ w?: number; r?: number }>(
+          (acc, s) => {
+            const w = s.weightKg || 0;
+            const r = s.reps || 0;
+            const accW = acc.w ?? -1;
+            const accR = acc.r ?? -1;
+            if (w > accW) return { w, r };
+            if (w === accW && r > accR) return { w, r };
+            return acc;
+          },
+          {
+            w: nextStats[normalized]?.bestWeight,
+            r: nextStats[normalized]?.bestReps,
+          }
+        );
+  
+        const prev = nextStats[normalized];
+        nextStats[normalized] = {
+          normalizedName: normalized,
+          displayName: prev?.displayName ?? display,
+          lastDate: endedAt,
+          lastWeight: typeof lastWeight === "number" ? lastWeight : prev?.lastWeight,
+          lastReps: typeof lastReps === "number" ? lastReps : prev?.lastReps,
+          bestWeight: typeof best.w === "number" ? best.w : prev?.bestWeight,
+          bestReps: typeof best.r === "number" ? best.r : prev?.bestReps,
+          usageCount: (prev?.usageCount ?? 0) + 1,
+        };
+  
+        // ✅ escreve stats (doc id = normalized)
+        statWrites.push(
+          upsertUserDoc(uid, "exerciseStats", { id: normalized, ...nextStats[normalized] } as any)
+        );
+      }
+  
+      // ✅ aplica stats no estado (não precisa esperar firestore)
+      setExerciseStats(nextStats);
+  
+      // ✅ escreve todos os stats em paralelo
+      await Promise.all(statWrites);
+  
+      // 3) auto-template
+      const tplNormalized = normalizeName(sessionToSave.name);
+      const tplExercises: TemplateExercise[] = sessionToSave.exercises.map((ex) => {
+        const n = ex.exerciseId || normalizeName(ex.name);
+        const displayName = ex.name.trim();
+        const targetSets = Math.max(1, ex.sets.length);
+  
+        const repsValues = ex.sets.map((s) => s.reps).filter((v) => typeof v === "number");
+        const freq = repsValues.reduce<Record<number, number>>((m, v) => {
+          m[v] = (m[v] || 0) + 1;
+          return m;
+        }, {});
+        const mode = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0];
+        const targetReps =
+          typeof mode !== "undefined" ? Number(mode) : repsValues.reverse().find((v) => v > 0) ?? undefined;
+  
+        return { normalizedName: n, displayName, targetSets, targetReps };
+      });
+  
+      const nextTemplate: WorkoutTemplate = {
+        id: crypto.randomUUID(),
+        normalizedName: tplNormalized,
+        displayName: sessionToSave.name,
+        updatedAt: endedAt,
+        exercises: tplExercises,
+      };
+  
+      setTemplates((prev) => {
+        const existingIdx = prev.findIndex((t) => t.normalizedName === tplNormalized);
+        if (existingIdx >= 0) {
+          const copy = [...prev];
+          nextTemplate.id = copy[existingIdx].id;
+          copy[existingIdx] = nextTemplate;
+          return copy;
+        }
+        return [nextTemplate, ...prev];
+      });
+  
+      await upsertUserDoc(uid, "templates", nextTemplate);
+    } catch (e) {
+      console.error("saveWorkout firestore error:", e);
+  
+      // ✅ Se falhar cloud, informa (mas a sessão local já foi fechada)
+      setToastText("Guardado (offline). A sincronizar…");
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 2200);
+    }
   };
   
-
-  const updateSet = (exIdx: number, sIdx: number, data: Partial<Set>) => {
+  
+    const updateSet = (exIdx: number, sIdx: number, data: Partial<Set>) => {
     if (!currentSession) return;
 
     const ex = currentSession.exercises[exIdx];
@@ -1301,29 +1316,30 @@ const [weightNote, setWeightNote] = useState('');
 
   const addExercise = (name: string) => {
     if (!name || !currentSession) return;
+  
     const { canonicalId, displayName } = canonicalizeExercise(name);
-if (!canonicalId) return;
-
-const already = currentSession.exercises.some(
-  (e) => e.exerciseId === canonicalId
-);
-
-const newEx: SessionExercise = {
-  id: crypto.randomUUID(),
-  exerciseId: canonicalId,
-  name: displayName.toUpperCase(),
-
-      sets: [
-        { id: crypto.randomUUID(), weightKg: 0, reps: 0, completed: false },
-      ],
+    if (!canonicalId) return;
+  
+    const already = currentSession.exercises.some((e) => e.exerciseId === canonicalId);
+    if (already) {
+      setExerciseInput('');
+      return;
+    }
+  
+    const newEx: SessionExercise = {
+      id: crypto.randomUUID(),
+      exerciseId: canonicalId,
+      name: displayName.toUpperCase(),
+      sets: [{ id: crypto.randomUUID(), weightKg: 0, reps: 0, completed: false }],
     };
-
+  
     setCurrentSession({
       ...currentSession,
       exercises: [...currentSession.exercises, newEx],
     });
     setExerciseInput('');
   };
+  
 
   const removeSession = async (id: string) => {
     setSessions((prev) => prev.filter((s) => s.id !== id));
@@ -2374,7 +2390,8 @@ const TABS: Array<{ id: TabId; icon: string }> = [
           <div className="p-4 space-y-6 pb-44">
             {currentSession.exercises.map((ex, exIdx) => {
               const thumb = pickImageFor(ex.name);
-              const perf = exerciseStats[normalizeName(ex.name)];
+              const perf = exerciseStats[ex.exerciseId || normalizeName(ex.name)];
+
 
               return (
                 <div
