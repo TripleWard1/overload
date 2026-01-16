@@ -8,7 +8,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { loadUserCollection, upsertUserDoc, deleteUserDoc } from "@/lib/db";
 import { getOrCreateUserProfile, updateUserDisplayName } from "@/lib/profile";
-import { fetchExerciseRanking } from "@/lib/rankings";
+import { fetchExerciseRanking, upsertRankingRow } from "@/lib/rankings";
 import { useRouter } from "next/navigation";
 
 
@@ -1009,17 +1009,31 @@ setNameInput(prof.displayName);
       };
   
       // ✅ GRAVAR STAT POR EXERCÍCIO (doc id = normalized)
-      if (uid) {
-        try {
-          await upsertUserDoc(uid, "exerciseStats", { id: normalized, ...nextStats[normalized] } as any);
-        } catch (e: any) {
-          console.error("Firestore save exerciseStats error:", e?.code, e?.message, e);
-          setToastText(`Erro a guardar stats: ${e?.code ?? "desconhecido"}`);
-          setShowSuccessToast(true);
-          setTimeout(() => setShowSuccessToast(false), 2200);
-          return;
-        }
-      }
+if (uid) {
+  try {
+    await upsertUserDoc(
+      uid,
+      "exerciseStats",
+      { id: normalized, ...nextStats[normalized] } as any
+    );
+
+    // ✅ também publica no ranking global (sem collectionGroup)
+    await upsertRankingRow({
+      uid,
+      exerciseId: normalized, // ex: "bench_press"
+      displayName: (displayName || nameInput || "").trim() || `Atleta ${uid.slice(0, 4).toUpperCase()}`,
+      bestWeight: nextStats[normalized]?.bestWeight,
+      bestReps: nextStats[normalized]?.bestReps,
+    });
+  } catch (e: any) {
+    console.error("Firestore save exerciseStats/ranking error:", e?.code, e?.message, e);
+    setToastText(`Erro a guardar stats: ${e?.code ?? "desconhecido"}`);
+    setShowSuccessToast(true);
+    setTimeout(() => setShowSuccessToast(false), 2200);
+    return;
+  }
+}
+
       
     }
   
