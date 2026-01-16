@@ -959,10 +959,17 @@ setNameInput(prof.displayName);
     const nextStats: Record<string, ExerciseStats> = { ...exerciseStats };
   
     for (const ex of sessionToSave.exercises) {
-      const normalized = ex.exerciseId || canonicalizeExercise(ex.name).canonicalId || normalizeName(ex.name);
+      const canon = canonicalizeExercise(ex.name);
 
+const normalized =
+  ex.exerciseId || canon.canonicalId || normalizeName(ex.name);
 
-      const display = canonicalizeExercise(ex.name).displayName || ex.name.trim();
+const display =
+  canon.displayName || ex.name.trim();
+
+// ✅ ESTE é o ID que vai para o ranking global
+const rankingId = canon.canonicalId || normalized;
+
 
   
       const completedSets = ex.sets.filter((s) => s.completed);
@@ -1020,8 +1027,8 @@ if (uid) {
     // ✅ também publica no ranking global (sem collectionGroup)
     await upsertRankingRow({
       uid,
-      exerciseId: normalized, // ex: "bench_press"
-      displayName: (displayName || nameInput || "").trim() || `Atleta ${uid.slice(0, 4).toUpperCase()}`,
+      exerciseId: rankingId, // ✅ agora vai sempre para bench_press/squat/deadlift quando existir alias
+      displayName: (displayName || "").trim() || `Atleta ${uid.slice(0, 4).toUpperCase()}`,
       bestWeight: nextStats[normalized]?.bestWeight,
       bestReps: nextStats[normalized]?.bestReps,
     });
