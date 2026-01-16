@@ -3011,7 +3011,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
           </div>
           <h2
             className="text-[28px] font-black italic uppercase tracking-[-0.04em] leading-none mt-1 text-white"
-            style={{ fontFamily: 'var(--font-grotesk), var(--font-inter), system-ui' }}
+            style={{ fontFamily: "var(--font-grotesk), var(--font-inter), system-ui" }}
           >
             Rankings
           </h2>
@@ -3022,58 +3022,119 @@ const TABS: Array<{ id: TabId; icon: string }> = [
       </div>
 
       <button
-        onClick={() => setActiveTab('home')}
+        onClick={() => setActiveTab("home")}
         className="btn-soft px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 shrink-0"
       >
         Home
       </button>
     </div>
 
-    <div className="card-premium rounded-[2.5rem] p-6">
-      <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
-        Exercício
-      </div>
+    {/* ✅ CARD NOVO */}
+    <div className="card-premium rounded-[2.75rem] p-6 relative overflow-hidden">
+      <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.10] app-noise" />
 
-      <select
-        value={rankingExercise}
-        onChange={(e) => setRankingExercise(e.target.value)}
-        className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm font-bold outline-none focus:ring-4 ring-emerald-300/20 text-white"
-      >
-        <option value="bench_press">Supino (Bench Press)</option>
-        <option value="squat">Agachamento (Squat)</option>
-        <option value="deadlift">Terra (Deadlift)</option>
-      </select>
-
-      <div className="mt-5 space-y-3">
-        {rankingLoading ? (
-          <div className="text-slate-300 text-xs font-bold">A carregar...</div>
-        ) : rankingRows.length === 0 ? (
-          <div className="text-slate-300 text-xs font-bold">Sem dados ainda.</div>
-        ) : (
-          rankingRows.map((r: any, i: number) => (
-            <div
-              key={`${r.uid}-${i}`}
-              className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between"
-            >
-              <div className="min-w-0">
-                <div className="text-white font-black italic truncate">
-                  {i + 1}. {r.displayName}
-                </div>
-                <div className="text-[10px] text-slate-300 font-mono uppercase mt-1">
-                  {typeof r.bestWeight === "number" ? `${r.bestWeight} kg` : "--"}
-                  {typeof r.bestReps === "number" ? ` × ${r.bestReps}` : ""}
-                </div>
-              </div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-emerald-300">
-                PR
-              </div>
+      <div className="relative">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-300">
+              Exercício
             </div>
-          ))
-        )}
+            <div className="mt-1 text-white font-black italic uppercase tracking-tighter text-lg">
+              Top PRs
+            </div>
+          </div>
+
+          <div className="h-11 w-11 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center">
+            🏆
+          </div>
+        </div>
+
+        <div className="mt-4 bg-white/5 border border-white/10 rounded-[1.65rem] p-2">
+          <select
+            value={rankingExercise}
+            onChange={(e) => setRankingExercise(e.target.value)}
+            className="w-full bg-transparent rounded-[1.35rem] px-4 py-3 text-sm font-black outline-none focus:ring-4 ring-emerald-300/20 text-white"
+          >
+            <option value="bench_press">Supino (Bench Press)</option>
+            <option value="squat">Agachamento (Squat)</option>
+            <option value="deadlift">Terra (Deadlift)</option>
+          </select>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {rankingLoading ? (
+            <div className="text-slate-300 text-xs font-bold">A carregar...</div>
+          ) : rankingRows.length === 0 ? (
+            <div className="text-slate-300 text-xs font-bold">Sem dados ainda.</div>
+          ) : (
+            rankingRows.map((r: any, i: number) => {
+              const isTop1 = i === 0;
+
+              return (
+                <div
+                  key={`${r.uid}-${i}`}
+                  className={[
+                    "relative overflow-hidden rounded-[2rem] border p-4 flex items-center justify-between gap-3",
+                    isTop1
+                      ? "bg-[linear-gradient(135deg,rgba(34,197,94,0.18),rgba(163,230,53,0.10),rgba(255,255,255,0.05))] border-emerald-300/25 shadow-[0_18px_60px_rgba(34,197,94,0.14)]"
+                      : "bg-white/5 border-white/10",
+                  ].join(" ")}
+                >
+                  <div className="pointer-events-none absolute inset-0 opacity-[0.08] app-noise" />
+
+                  <div className="relative flex items-center gap-3 min-w-0">
+                    <div
+                      className={[
+                        "h-10 w-10 rounded-2xl flex items-center justify-center font-black text-[12px] border shrink-0",
+                        isTop1
+                          ? "bg-[linear-gradient(135deg,#22c55e,#a3e635)] text-[#071018] border-emerald-200/40"
+                          : "bg-white/5 text-white border-white/10",
+                      ].join(" ")}
+                    >
+                      {i + 1}
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="text-white font-black italic truncate">
+                        {r.displayName}
+                      </div>
+
+                      <div className="mt-1 flex items-baseline gap-2">
+                        <div className="text-[12px] font-black text-white">
+                          {typeof r.bestWeight === "number" ? `${r.bestWeight} kg` : "--"}
+                        </div>
+                        <div className="text-[10px] text-slate-300 font-mono uppercase">
+                          {typeof r.bestReps === "number" ? `× ${r.bestReps}` : ""}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="relative shrink-0">
+                    <span
+                      className={[
+                        "inline-flex items-center gap-2 px-3 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border",
+                        isTop1
+                          ? "bg-emerald-400 text-[#071018] border-emerald-200/40"
+                          : "bg-white/5 text-emerald-300 border-white/10",
+                      ].join(" ")}
+                    >
+                      {isTop1 ? "👑 PR" : "PR"}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   </div>
 )}
+
+
 
 
 {activeTab === 'profile' && (
@@ -3199,7 +3260,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
     <div className="pointer-events-none absolute inset-0 rounded-[2.9rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(0,0,0,0.00))]" />
 
     <div className="relative overflow-x-auto no-scrollbar">
-  <div className="flex items-center justify-between gap-1 min-w-max">
+  <div className="flex items-center gap-2 px-1 w-max">
     {TABS.map((tab) => (
       <button
         key={tab.id}
@@ -3228,6 +3289,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
     ))}
   </div>
 </div>
+
 
 </div>
 
