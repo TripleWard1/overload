@@ -3259,21 +3259,21 @@ const TABS: Array<{ id: TabId; icon: string }> = [
     {/* leve gradiente para “segurar” sobre imagens claras */}
     <div className="pointer-events-none absolute inset-0 rounded-[2.9rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(0,0,0,0.00))]" />
 
-    <div className="relative overflow-x-auto no-scrollbar">
-  <div className="flex items-center gap-2 px-1 w-max">
+    <div className="relative">
+  <div className="grid grid-cols-6 gap-2">
     {TABS.map((tab) => (
       <button
         key={tab.id}
         onClick={() => setActiveTab(tab.id)}
-        className={`relative flex-none flex flex-col items-center p-2 transition-all duration-300 rounded-2xl ${
-          activeTab === tab.id ? 'text-[#071018]' : 'text-slate-300'
+        className={`relative flex flex-col items-center justify-center p-2 transition-all duration-300 rounded-2xl ${
+          activeTab === tab.id ? "text-[#071018]" : "text-slate-300"
         }`}
       >
         <span
-          className={`mb-1 h-10 w-10 rounded-2xl flex items-center justify-center transition-all border ${
+          className={`h-10 w-10 rounded-2xl flex items-center justify-center transition-all border ${
             activeTab === tab.id
-              ? 'bg-[linear-gradient(135deg,#22c55e,#a3e635)] border-emerald-200/40 shadow-[0_16px_50px_rgba(34,197,94,0.18)]'
-              : 'bg-white/5 border-white/10'
+              ? "bg-[linear-gradient(135deg,#22c55e,#a3e635)] border-emerald-200/40 shadow-[0_16px_50px_rgba(34,197,94,0.18)]"
+              : "bg-white/5 border-white/10"
           }`}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3289,6 +3289,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
     ))}
   </div>
 </div>
+
 
 
 </div>
