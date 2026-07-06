@@ -1,6 +1,11 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 
+// ✅ Isto é o que define de facto a variável --font-inter usada em todo o page.tsx.
+// Sem isto, var(--font-inter) nunca resolvia para nada e a app caía sempre no
+// fallback system-ui (a fonte "premium" nunca era realmente aplicada).
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Overload",
@@ -24,7 +29,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt">
-  <body className="min-h-screen bg-[#070B14] text-white">{children}</body>
+  <body className={`min-h-screen bg-[#070B14] text-white ${inter.variable}`}>{children}</body>
 </html>
 
   );

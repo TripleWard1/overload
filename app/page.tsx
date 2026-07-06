@@ -12,12 +12,6 @@ import { fetchExerciseRanking, upsertRankingRow } from "@/lib/rankings";
 import { useRouter } from "next/navigation";
 
 
-/* -------------------- FONTS (premium) -------------------- */
-
-
-// mantém a variável para não teres de mexer no resto do CSS
-const grotesk = { variable: '--font-grotesk' } as const;
-
 /* -------------------- TYPES -------------------- */
 type Set = { id: string; weightKg: number; reps: number; completed: boolean };
 type SessionExercise = {
@@ -171,65 +165,43 @@ const canonicalizeExercise = (raw: string) => {
 
 /**
  * ✅ Estratégia:
- * - Em vez de /featured ou search aleatório, usamos "collections" do Unsplash:
- *   https://source.unsplash.com/collection/{ID}/1200x800?sig=...
- * - Isto mantém o conteúdo MUITO mais "gym-only"
- * - O ?sig=... torna determinístico (não muda a cada refresh)
- *
- * NOTA: se quiseres, posso ajustar/trocar IDs para coleções ainda mais “hard gym”.
+ * - O serviço "source.unsplash.com/collection/..." foi descontinuado pela Unsplash
+ *   (devolve 503 em produção), por isso deixava de mostrar imagem em TODOS os
+ *   templates e exercícios, caindo sempre no fallback.
+ * - Agora usamos URLs diretas de "images.unsplash.com/photo-<id>" (o CDN de imagens
+ *   propriamente dito, não o serviço "source" descontinuado), que são estáveis e
+ *   verificadas. O ?sig=... deixa de ser necessário: a variedade vem de haver
+ *   várias fotos por categoria + escolha determinística por hash do nome.
  */
 
-const UNSPLASH_COLLECTIONS = {
-  gym: [483251, 1163637, 139386, 3694365],
-  benchpress: [139386, 483251],
-  back: [1163637, 3694365],
-  squat: [3694365, 139386],
-  deadlift: [3694365, 139386],
-  shoulders: [1163637, 483251],
-  arms: [483251, 139386],
-  abs: [483251],
-  cardio: [1163637],
-  machines: [1163637],
-  crossfit: [3694365],
-  bodybuilding: [139386],
-  dumbbell: [483251, 1163637],
-  barbell: [139386, 3694365],
+const IMAGE_IDS_BY_CATEGORY = {
+  gym: ['1517836357463-d25dfeac3438', '1550345332-09e3ac987658', '1526506118085-60ce8714f8c5', '1610276198568-eb6d0ff53e48'],
+  benchpress: ['1571019614242-c5c5dee9f50b', '1544033527-b192daee1f5b'],
+  back: ['1523395243481-163f8f6155ab', '1584735175315-9d5df23860e6'],
+  squat: ['1534438327276-14e5300c3a48', '1581122584612-713f89daa8eb'],
+  deadlift: ['1548690312-e3b507d8c110', '1593079831268-3381b0db4a77'],
+  shoulders: ['1571731956672-f2b94d7dd0cb', '1526401485004-46910ecc8e51'],
+  arms: ['1546483875-ad9014c88eba', '1638536532686-d610adfc8e5c'],
+  abs: ['1521804906057-1df8fdb718b7', '1584464491033-06628f3a6b7b'],
+  cardio: ['1476480862126-209bfaa8edc8', '1517963879433-6ad2b056d712'],
+  machines: ['1550259979-ed79b48d2a30', '1583454110551-21f2fa2afe61'],
+  crossfit: ['1571019613454-1cb2f99b2d8b', '1584466977773-e625c37cdd50'],
+  bodybuilding: ['1544033527-b192daee1f5b', '1546483875-ad9014c88eba'],
+  dumbbell: ['1584735175315-9d5df23860e6', '1521804906057-1df8fdb718b7'],
+  barbell: ['1593079831268-3381b0db4a77', '1548690312-e3b507d8c110'],
 } as const;
 
-type ImgCategory = keyof typeof UNSPLASH_COLLECTIONS;
+type ImgCategory = keyof typeof IMAGE_IDS_BY_CATEGORY;
 
-const ucol = (collectionId: number, sig: number) =>
-  `https://source.unsplash.com/collection/${collectionId}/1200x800?sig=${sig}`;
+const uphoto = (id: string) =>
+  `https://images.unsplash.com/photo-${id}?q=80&w=1200&auto=format&fit=crop`;
 
-/** ✅ Base organizada por categorias (total ~520 imagens) */
-const IMAGES_BY_CATEGORY: Record<ImgCategory, string[]> = (() => {
-  const build = (cat: ImgCategory, count: number) => {
-    const cols = UNSPLASH_COLLECTIONS[cat];
-    return Array.from({ length: count }, (_, i) => {
-      const col = cols[i % cols.length];
-      return ucol(col, 1000 + i * 7 + cols.length);
-    });
-  };
+/** ✅ Base organizada por categorias (URLs diretas, verificadas) */
+const IMAGES_BY_CATEGORY: Record<ImgCategory, string[]> = Object.fromEntries(
+  Object.entries(IMAGE_IDS_BY_CATEGORY).map(([cat, ids]) => [cat, ids.map(uphoto)])
+) as Record<ImgCategory, string[]>;
 
-  return {
-    gym: build('gym', 200),
-    benchpress: build('benchpress', 40),
-    back: build('back', 45),
-    squat: build('squat', 45),
-    deadlift: build('deadlift', 35),
-    shoulders: build('shoulders', 30),
-    arms: build('arms', 30),
-    abs: build('abs', 20),
-    cardio: build('cardio', 20),
-    machines: build('machines', 20),
-    crossfit: build('crossfit', 10),
-    bodybuilding: build('bodybuilding', 10),
-    dumbbell: build('dumbbell', 10),
-    barbell: build('barbell', 10),
-  };
-})();
-
-/** ✅ Pool geral (≈520 urls) */
+/** ✅ Pool geral (fallback quando a categoria não tem imagens) */
 const WORKOUT_IMAGE_POOL: string[] = Object.values(IMAGES_BY_CATEGORY).flat();
 
 /**
@@ -336,43 +308,6 @@ const formatDuration = (seconds: number) => {
   return hh > 0 ? `${pad(hh)}:${pad(mm)}:${pad(ss)}` : `${pad(mm)}:${pad(ss)}`;
 };
 
-// --- COLAR ESTA FUNÇÃO DE IMAGENS LOGO ABAIXO DO LOGO ---
-const getExerciseImage = (name: string) => {
-  const n = name?.toLowerCase() || '';
-  if (
-    n.includes('supino') ||
-    n.includes('peito') ||
-    n.includes('chest') ||
-    n.includes('press')
-  )
-    return 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=800&auto=format&fit=crop';
-  if (
-    n.includes('agachamento') ||
-    n.includes('perna') ||
-    n.includes('leg') ||
-    n.includes('press')
-  )
-    return 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop';
-  if (
-    n.includes('costas') ||
-    n.includes('back') ||
-    n.includes('puxada') ||
-    n.includes('remada')
-  )
-    return 'https://images.unsplash.com/photo-1603287611630-d645505273b7?q=80&w=800&auto=format&fit=crop';
-  if (n.includes('ombro') || n.includes('shoulder') || n.includes('militar'))
-    return 'https://images.unsplash.com/photo-1541534741688-6078c64b52d2?q=80&w=800&auto=format&fit=crop';
-  if (
-    n.includes('braço') ||
-    n.includes('bicep') ||
-    n.includes('tricep') ||
-    n.includes('rosca')
-  )
-    return 'https://images.unsplash.com/photo-1581009146145-b5ef03a7403f?q=80&w=800&auto=format&fit=crop';
-
-  return 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=800&auto=format&fit=crop';
-};
-
 /* -------------------- APP -------------------- */
 type TabId =
   | 'home'
@@ -384,6 +319,43 @@ type TabId =
   | 'profile'
   | 'rankings';
 
+/**
+ * ✅ Fica FORA de GymApp de propósito: se ficasse definido dentro do componente,
+ * era recriado (novo tipo de componente) em cada render — e como o GymApp
+ * re-renderiza a cada segundo durante o treino (timer), isso desmontava e
+ * remontava a <img> do logo a cada segundo (flicker constante no ecrã de treino).
+ */
+const BrandMark = ({
+  sizePx = 64,
+  widthPx,
+  heightPx,
+}: {
+  sizePx?: number;
+  widthPx?: number;
+  heightPx?: number;
+}) => {
+  const w = typeof widthPx === 'number' ? widthPx : sizePx;
+  const h = typeof heightPx === 'number' ? heightPx : sizePx;
+
+  const [src, setSrc] = useState(BRAND_LOGO_URL);
+
+  return (
+    <img
+      src={src}
+      alt="Overload logo"
+      width={w}
+      height={h}
+      draggable={false}
+      onError={(e) => {
+        const img = e.currentTarget as HTMLImageElement;
+        if (img.dataset.fallbackApplied === '1') return;
+        img.dataset.fallbackApplied = '1';
+        setSrc('https://i.imgur.com/jROIhp2.png');
+      }}
+      style={{ objectFit: 'contain', display: 'block' }}
+    />
+  );
+};
 
 export default function GymApp() {
   
@@ -1046,8 +1018,15 @@ if (uid) {
   
     setExerciseStats(nextStats);
   
-    // ✅ Se a sessão veio de um template, NÃO alteramos templates automaticamente
-if (sessionToSave.fromTemplateId) {
+    // ✅ Se a sessão veio de um template já guardado, NÃO alteramos templates automaticamente.
+    // (Se fromTemplateId apontar para um template ainda não guardado — ex.: "Iniciar agora"
+    // a partir do editor sem gravar antes — seguimos para o auto-template, senão os
+    // exercícios feitos nunca ficavam reutilizáveis.)
+    const cameFromSavedTemplate =
+      !!sessionToSave.fromTemplateId &&
+      templates.some((t) => t.id === sessionToSave.fromTemplateId);
+
+if (cameFromSavedTemplate) {
   setToastText('Treino guardado');
   setShowSuccessToast(true);
   setTimeout(() => setShowSuccessToast(false), 1600);
@@ -1339,56 +1318,21 @@ const newEx: SessionExercise = {
 
  /* -------------------- SHARED UI -------------------- */
 
- const BrandMark = ({
-  sizePx = 64,
-  widthPx,
-  heightPx,
-}: {
-  sizePx?: number;
-  widthPx?: number;
-  heightPx?: number;
-}) => {
-  const w = typeof widthPx === 'number' ? widthPx : sizePx;
-  const h = typeof heightPx === 'number' ? heightPx : sizePx;
-
-  const [src, setSrc] = useState(BRAND_LOGO_URL);
-
-  return (
-    <img
-      src={src}
-      alt="Overload logo"
-      width={w}
-      height={h}
-      draggable={false}
-      onError={(e) => {
-        const img = e.currentTarget as HTMLImageElement;
-        if (img.dataset.fallbackApplied === '1') return;
-        img.dataset.fallbackApplied = '1';
-        setSrc('https://i.imgur.com/jROIhp2.png');
-      }}
-      style={{ objectFit: 'contain', display: 'block' }}
-    />
-  );
-};
-
-const TABS: Array<{ id: TabId; icon: string }> = [
-  { id: 'home', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-  { id: 'templates', icon: 'M9 12h6m-6 4h6m-7 4h8a2 2 0 002-2V6a2 2 0 00-2-2H8a2 2 0 00-2 2v12a2 2 0 002 2z' },
-  { id: 'train', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
-  { id: 'peso', icon: 'M12 3v18m9-9H3' },
-  { id: 'calendar', icon: 'M8 7V5m8 2V5M4 9h16m-2 12H6a2 2 0 01-2-2V9a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2z' },
-  { id: 'history', icon: 'M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+const TABS: Array<{ id: TabId; icon: string; label: string }> = [
+  { id: 'home', label: 'Início', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { id: 'templates', label: 'Treinos', icon: 'M9 12h6m-6 4h6m-7 4h8a2 2 0 002-2V6a2 2 0 00-2-2H8a2 2 0 00-2 2v12a2 2 0 002 2z' },
+  { id: 'train', label: 'Treinar', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+  { id: 'peso', label: 'Peso', icon: 'M12 3v18m9-9H3' },
+  { id: 'calendar', label: 'Calendário', icon: 'M8 7V5m8 2V5M4 9h16m-2 12H6a2 2 0 01-2-2V9a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2z' },
+  { id: 'history', label: 'Histórico', icon: 'M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
 ];
 
 
   /* -------------------- RENDER -------------------- */
   return (
     <main
-    className={[
-      'app-shell max-w-md mx-auto min-h-screen pb-36 text-slate-100',
-      grotesk.variable,
-    ].join(' ')}
-    
+    className="app-shell max-w-md mx-auto min-h-screen pb-36 text-slate-100"
+
   style={{
     fontFamily:
       'var(--font-inter), system-ui, -apple-system, Segoe UI, Roboto, Arial',
@@ -1406,6 +1350,21 @@ const TABS: Array<{ id: TabId; icon: string }> = [
         <div className="absolute inset-0 bg-[radial-gradient(900px_620px_at_50%_-10%,rgba(0,0,0,0.55),transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(1100px_820px_at_50%_120%,rgba(0,0,0,0.70),transparent_60%)]" />
       </div>
+
+      {/* LOADING OVERLAY (evita "flash" de 0 treinos/0 exercícios enquanto o Firestore carrega) */}
+      {uid && !hydrated && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-[#070B14]">
+          <div className="flex flex-col items-center gap-4">
+            <BrandMark sizePx={56} />
+            <div className="h-1 w-32 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full w-1/3 animate-pulse rounded-full bg-[linear-gradient(90deg,#22c55e,#a3e635)]" />
+            </div>
+            <div className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">
+              A carregar o teu treino…
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* REST TIMER OVERLAY */}
       {restTimer !== null && restTimer > 0 && (
@@ -1605,7 +1564,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
                     className="text-xl font-black italic uppercase tracking-tighter mt-1 text-white"
                     style={{
                       fontFamily:
-                        'var(--font-grotesk), var(--font-inter), system-ui',
+                        '"Space Grotesk", var(--font-inter), system-ui',
                     }}
                   >
                     Treinos personalizados
@@ -1686,7 +1645,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
                   className="text-2xl font-black italic uppercase leading-none mb-1 text-white"
                   style={{
                     fontFamily:
-                      'var(--font-grotesk), var(--font-inter), system-ui',
+                      '"Space Grotesk", var(--font-inter), system-ui',
                   }}
                 >
                   Sessão livre
@@ -1739,7 +1698,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
         </div>
         <div
           className="text-[26px] font-black italic uppercase tracking-[-0.04em] leading-none text-white truncate"
-          style={{ fontFamily: 'var(--font-grotesk), var(--font-inter), system-ui' }}
+          style={{ fontFamily: '"Space Grotesk", var(--font-inter), system-ui' }}
         >
           {selectedTemplateId ? 'Treino' : 'Treinos'}
         </div>
@@ -1771,7 +1730,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
                     className="text-2xl font-black italic uppercase tracking-tighter text-white"
                     style={{
                       fontFamily:
-                        'var(--font-grotesk), var(--font-inter), system-ui',
+                        '"Space Grotesk", var(--font-inter), system-ui',
                     }}
                   >
                     Treinos
@@ -1824,6 +1783,8 @@ const TABS: Array<{ id: TabId; icon: string }> = [
   className="h-full w-full object-cover"
   onError={imgFallback}
   draggable={false}
+  loading="lazy"
+  decoding="async"
 />
 
                           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.10),rgba(7,11,20,0.92))]" />
@@ -1836,7 +1797,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
                               className="text-lg font-black italic uppercase tracking-tighter text-white"
                               style={{
                                 fontFamily:
-                                  'var(--font-grotesk), var(--font-inter), system-ui',
+                                  '"Space Grotesk", var(--font-inter), system-ui',
                               }}
                             >
                               {t.displayName}
@@ -1916,7 +1877,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
                     className="mt-2 w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 font-black italic tracking-tighter text-lg outline-none focus:ring-4 ring-emerald-300/20 text-white placeholder:text-slate-500"
                     style={{
                       fontFamily:
-                        'var(--font-grotesk), var(--font-inter), system-ui',
+                        '"Space Grotesk", var(--font-inter), system-ui',
                     }}
                   />
 
@@ -2032,7 +1993,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
                               className="text-white font-black italic uppercase text-lg tracking-tighter truncate"
                               style={{
                                 fontFamily:
-                                  'var(--font-grotesk), var(--font-inter), system-ui',
+                                  '"Space Grotesk", var(--font-inter), system-ui',
                               }}
                             >
                               {ex.displayName}
@@ -2154,7 +2115,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
                   className="text-xl font-black italic uppercase tracking-tighter mt-2 text-white"
                   style={{
                     fontFamily:
-                      'var(--font-grotesk), var(--font-inter), system-ui',
+                      '"Space Grotesk", var(--font-inter), system-ui',
                   }}
                 >
                   Remover treino?
@@ -2198,7 +2159,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
                         className="font-black italic uppercase text-sm tracking-tighter truncate text-white"
                         style={{
                           fontFamily:
-                            'var(--font-grotesk), var(--font-inter), system-ui',
+                            '"Space Grotesk", var(--font-inter), system-ui',
                         }}
                       >
                         {currentSession.name}
@@ -2277,6 +2238,8 @@ const TABS: Array<{ id: TabId; icon: string }> = [
   className="h-full w-full object-cover"
   onError={imgFallback}
   draggable={false}
+  loading="lazy"
+  decoding="async"
 />
 
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.10),rgba(7,11,20,0.92))]" />
@@ -2288,7 +2251,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
                             className="text-white font-black italic uppercase text-lg tracking-tighter truncate"
                             style={{
                               fontFamily:
-                                'var(--font-grotesk), var(--font-inter), system-ui',
+                                '"Space Grotesk", var(--font-inter), system-ui',
                             }}
                           >
                             {ex.name}
@@ -2443,7 +2406,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
         </div>
         <h2
           className="text-[28px] font-black italic uppercase tracking-[-0.04em] leading-none mt-1 text-white"
-          style={{ fontFamily: 'var(--font-grotesk), var(--font-inter), system-ui' }}
+          style={{ fontFamily: '"Space Grotesk", var(--font-inter), system-ui' }}
         >
           Peso
         </h2>
@@ -2606,7 +2569,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
       <h2
         className="text-[28px] font-black italic uppercase tracking-[-0.04em] leading-none mt-1 text-white"
         style={{
-          fontFamily: 'var(--font-grotesk), var(--font-inter), system-ui',
+          fontFamily: '"Space Grotesk", var(--font-inter), system-ui',
         }}
       >
         Calendário
@@ -2713,7 +2676,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
                     className="text-xl font-black italic uppercase tracking-tighter mt-2 text-white"
                     style={{
                       fontFamily:
-                        'var(--font-grotesk), var(--font-inter), system-ui',
+                        '"Space Grotesk", var(--font-inter), system-ui',
                     }}
                   >
                     {new Date(selectedDateKey + 'T00:00:00').toLocaleDateString(
@@ -2758,7 +2721,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
                               className="text-lg font-black italic uppercase tracking-tighter truncate mt-1 text-white"
                               style={{
                                 fontFamily:
-                                  'var(--font-grotesk), var(--font-inter), system-ui',
+                                  '"Space Grotesk", var(--font-inter), system-ui',
                               }}
                             >
                               {s.name}
@@ -2817,7 +2780,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
             <div
               className="text-2xl font-black italic uppercase tracking-tighter truncate mt-2 text-white"
               style={{
-                fontFamily: 'var(--font-grotesk), var(--font-inter), system-ui',
+                fontFamily: '"Space Grotesk", var(--font-inter), system-ui',
               }}
             >
               {selectedSession.name}
@@ -2912,7 +2875,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
                   className="text-xl font-black italic uppercase tracking-tighter mt-2 text-white"
                   style={{
                     fontFamily:
-                      'var(--font-grotesk), var(--font-inter), system-ui',
+                      '"Space Grotesk", var(--font-inter), system-ui',
                   }}
                 >
                   Remover sessão?
@@ -2952,7 +2915,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
         <h2
           className="text-[28px] font-black italic uppercase tracking-[-0.04em] leading-none mt-1 text-white"
           style={{
-            fontFamily: 'var(--font-grotesk), var(--font-inter), system-ui',
+            fontFamily: '"Space Grotesk", var(--font-inter), system-ui',
           }}
         >
           Histórico
@@ -2984,7 +2947,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
               className="font-black italic uppercase text-lg mb-1 text-white"
               style={{
                 fontFamily:
-                  'var(--font-grotesk), var(--font-inter), system-ui',
+                  '"Space Grotesk", var(--font-inter), system-ui',
               }}
             >
               {s.name}
@@ -3011,7 +2974,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
           </div>
           <h2
             className="text-[28px] font-black italic uppercase tracking-[-0.04em] leading-none mt-1 text-white"
-            style={{ fontFamily: "var(--font-grotesk), var(--font-inter), system-ui" }}
+            style={{ fontFamily: '"Space Grotesk", var(--font-inter), system-ui' }}
           >
             Rankings
           </h2>
@@ -3148,7 +3111,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
           </div>
           <h2
             className="text-[28px] font-black italic uppercase tracking-[-0.04em] leading-none mt-1 text-white"
-            style={{ fontFamily: 'var(--font-grotesk), var(--font-inter), system-ui' }}
+            style={{ fontFamily: '"Space Grotesk", var(--font-inter), system-ui' }}
           >
             Perfil
           </h2>
@@ -3265,7 +3228,9 @@ const TABS: Array<{ id: TabId; icon: string }> = [
       <button
         key={tab.id}
         onClick={() => setActiveTab(tab.id)}
-        className={`relative flex flex-col items-center justify-center p-2 transition-all duration-300 rounded-2xl ${
+        aria-label={tab.label}
+        aria-current={activeTab === tab.id ? "page" : undefined}
+        className={`relative flex flex-col items-center justify-center gap-1 p-2 transition-all duration-300 rounded-2xl ${
           activeTab === tab.id ? "text-[#071018]" : "text-slate-300"
         }`}
       >
@@ -3284,6 +3249,13 @@ const TABS: Array<{ id: TabId; icon: string }> = [
               d={tab.icon}
             />
           </svg>
+        </span>
+        <span
+          className={`text-[8px] font-black uppercase tracking-widest leading-none ${
+            activeTab === tab.id ? "text-emerald-300" : "text-slate-400"
+          }`}
+        >
+          {tab.label}
         </span>
       </button>
     ))}
@@ -3437,7 +3409,7 @@ const TABS: Array<{ id: TabId; icon: string }> = [
 
   /* Wordmark */
   .brand-wordmark {
-    font-family: var(--font-grotesk), var(--font-inter), system-ui;
+    font-family: 'Space Grotesk', var(--font-inter), system-ui;
     font-weight: 900;
     font-size: 34px;
     line-height: 1;
